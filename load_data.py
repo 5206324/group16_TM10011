@@ -71,3 +71,4 @@ print("y_val shape:", y_val.shape)
 print("X_test shape:", X_test.shape)
 print("y_test shape:", y_test.shape)
 # %%
+# ik voeg dit nog een keer toe
