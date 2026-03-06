@@ -72,3 +72,6 @@ print("X_test shape:", X_test.shape)
 print("y_test shape:", y_test.shape)
 # %%
 # ik voeg dit nog een keer toe
+
+#%% 
+#Branch Fenne
