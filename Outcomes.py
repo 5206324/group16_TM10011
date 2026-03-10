@@ -1,0 +1,25 @@
+# %% functie voor bepalen uitkomstmaten
+
+# wat erin moet:
+# y_test = Test data
+# y_score = voorspelde kans : clf.predict_proba(X_test)[:, 1] (hierbij is X_test dus vd testdata)
+# y_pred = = voorspelde klasse : clf.predict(X_test) (hierbij is X_test dus vd testdata)
+# model = classifier model
+
+def outcomes(y_test, y_score, y_pred, model):
+    from sklearn import metrics
+
+    auc=metrics.roc_auc_score(y_test, y_score)
+    accuracy=metrics.accuracy_score(y_test, y_pred)
+    F1=metrics.f1_score(y_test,y_pred)
+    precision=metrics.precision_score(y_test,y_pred)
+    recall=metrics.recall_score(y_test, y_pred)
+# accuracy, AUC, f1score, precision, recall
+    print(type(model))
+    print('Acc:' +str(accuracy))
+    print('AUC:' +str(auc))
+    print('F1:' +str(F1))
+    print('precision:' +str(precision))
+    print('recall:' +str(recall))
+
+    return auc, accuracy, F1, precision, recall

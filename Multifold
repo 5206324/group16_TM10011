@@ -15,8 +15,7 @@ from sklearn.impute import SimpleImputer
 from sklearn.ensemble import RandomForestClassifier 
 
 #%% Load Data
-path = (r"C:\Users\Mfvan\Dropbox\pc (4)\Documents\01 Melle van Hoffe\Klinische Technologie\TM 1, S&S\TM110011 Machine Learning\group16_TM10011\Lipo_radiomicFeatures.csv")
-
+path = ("/Users/fenne/Documents/Technical Medicine/TM10011/Project/group16_TM10011/Lipo_radiomicFeatures.csv")
 def load_data():
     this_directory = os.path.dirname(os.path.abspath(__file__))
     data = pd.read_csv(os.path.join(this_directory, 'Lipo_radiomicFeatures.csv'), index_col=0)
@@ -32,6 +31,7 @@ target_column = 'label'
 # Separate features (X) and target (y)
 X = data.drop(columns=[target_column])
 y = data[target_column]
+y = y.map({'lipoma': 0, 'liposarcoma': 1})
 
 #%% Stratified K-Fold Cross Validation Loop with integrated preprocessing
 # Split into 5 folds
@@ -83,4 +83,6 @@ print(f"Average Accuracy: {np.mean(fold_accuracies):.4f} (± {np.std(fold_accura
 # %% uitkomsten bepalen
 
 from Outcomes import outcomes
-auc, acc, f1, prec, rec = outcomes(y_test, y_score, y_pred, model)
+auc, accuracy, F1, precision, recall = outcomes(y_test, y_score, y_pred, model)
+
+# %%
