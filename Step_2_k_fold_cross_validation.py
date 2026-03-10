@@ -82,7 +82,7 @@ print("-" * 35)
 print(f"Average Accuracy: {np.mean(fold_accuracies):.4f} (± {np.std(fold_accuracies):.4f})")
 # %% uitkomsten bepalen
 
-from Outcomes import outcomes
+from Step_7_Post_analysis import outcomes
 auc, accuracy, F1, precision, recall = outcomes(y_test, y_score, y_pred, model)
 
 # %%
