@@ -205,7 +205,14 @@ ax = fig.add_subplot(132)
 ax.set_title("Two blobs, two classes", fontsize='small')
 ax.scatter(X3[:, 0], X3[:, 1], marker='o', c=Y3, s=25, edgecolor='k', cmap=plt.cm.Paired)
 
-X4, Y4 = load_breast_cancer()
+X_scaled = StandardScaler().fit_transform(X)
+pca = PCA(n_components=2)
+X4 = pca.fit_transform(X_scaled)
+
+# Zet de labels (y) om naar nummers (0 en 1) voor de plotter
+# 'lipoma' wordt 0, 'liposarcoma' wordt 1 (of andersom)
+Y4 = pd.factorize(y)[0]
+
 ax = fig.add_subplot(133)
 ax.set_title("A more complicated problem", fontsize='small')
 ax.scatter(X4[:, 0], X4[:, 1], marker='o', c=Y4, s=25, edgecolor='k', cmap=plt.cm.Paired)
