@@ -9,9 +9,6 @@ import matplotlib.pyplot as plt
 from sklearn import datasets as ds
 from sklearn import metrics
 
-
-
-
 path = ("/Users/fenne/Documents/Technical Medicine/TM10011/Project/group16_TM10011/Lipo_radiomicFeatures.csv")
 
 def load_data():
@@ -23,6 +20,23 @@ def load_data():
 
 data = load_data()
 
+# %% Classifiers aanhalen
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
+
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis, QuadraticDiscriminantAnalysis
+from sklearn.naive_bayes import GaussianNB
+from sklearn.linear_model import LogisticRegression, SGDClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.ensemble import RandomForestClassifier
+
+# List to loop through later
+models_to_test = [
+    ('LogReg', LogisticRegression()),
+    ('LDA', LinearDiscriminantAnalysis()),
+    ('RF', RandomForestClassifier()),
+    ('KNN', KNeighborsClassifier(n_neighbors=5))
+]
 # %% feature summary
 feature_summary = {}
 
@@ -38,54 +52,40 @@ for col in data.columns:
 
 for k, v in feature_summary.items():
     print(k, ":", sorted(v))
-# %% printing verdeling
+# %% print verdeling
 lipoma = data[data["label"] == "lipoma"]
 liposarcoma = data[data["label"] == "liposarcoma"]
 
 print("Lipoma:", lipoma.shape)
 print("Liposarcoma:", liposarcoma.shape)
 
-
-
-
-# %%
-# Features en labels
-X = data.drop(columns=["label"])
-y = data["label"]
-
-# Stratified K-Fold met 5 splits
-skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
-
-# Itereer over de folds
-for fold, (train_index, val_index) in enumerate(skf.split(X, y)):
-    X_train, X_val = X.iloc[train_index], X.iloc[val_index]
-    y_train, y_val = y.iloc[train_index], y.iloc[val_index]
-    
-    print(f"Fold {fold+1}")
-    print("Train:", X_train.shape, y_train.value_counts().to_dict())
-    print("Validation:", X_val.shape, y_val.value_counts().to_dict())
-    print("-"*30)
-
-
-
-
- #%%
+ #%%Label verdeling
 lipoma = data[data["label"] == "lipoma"]
 liposarcoma = data[data["label"] == "liposarcoma"]
 
- ## Find columns containing 'area'
-area_cols = [col for col in data.columns if "area" in col.lower()]
-print(area_cols)   
-# %% 
+alle_kolommen = data.columns.tolist()
+print(f"TOTALE FEATURES GEONDEN: {len(alle_kolommen)}")
+print("-" * 40)
 
+for i, col in enumerate(alle_kolommen, 1):
+    # Print index en de volledige naam van de kolom
+    print(f"{i:03}. {col}")
 
-
+print("-" * 40)
+# %% Feature exploration --- oppervlakte
 area_cols = [
 'PREDICT_original_sf_area_avg_2.5D',
 'PREDICT_original_sf_area_max_2.5D',
 'PREDICT_original_sf_area_min_2.5D',
 'PREDICT_original_sf_area_std_2.5D'
 ]
+
+graph_titles = {
+    'PREDICT_original_sf_area_avg_2.5D': 'Average Tumor Area',
+    'PREDICT_original_sf_area_max_2.5D': 'Maximum Tumor Area',
+    'PREDICT_original_sf_area_min_2.5D': 'Minimum Tumor Area',
+    'PREDICT_original_sf_area_std_2.5D': 'Area Standard Deviation'
+}
 
 fig, axes = plt.subplots(2, 2, figsize=(12,8))
 
@@ -94,178 +94,108 @@ for i, col in enumerate(area_cols):
     
     ax.hist(lipoma[col], bins=30, alpha=0.5, label="lipoma")
     ax.hist(liposarcoma[col], bins=30, alpha=0.5, label="liposarcoma")
-    
-    ax.set_title(col.split("area_")[1])  # shorter title
+    ax.set_title(graph_titles[col], fontsize=12, fontweight='bold')
     ax.set_xlabel("Area value")
     ax.set_ylabel("Frequency")
     ax.legend()
 
 plt.tight_layout()
 plt.show()
-ax.hist(lipoma[col], bins=30, alpha=0.5, label="Lipoma", density=True)
-ax.hist(liposarcoma[col], bins=30, alpha=0.5, label="Liposarcoma", density=True)
 
-# %% Classifiers
+# %% Feature exploration --- visualisatie
+#%% --- 1. CONFIGURATIE ---
+USE_PCA = False 
+f1 = 'PREDICT_original_sf_roughness_avg_2.5D'
+f2 = 'PREDICT_original_sf_convexity_avg_2.5D'
 
-from sklearn.naive_bayes import GaussianNB
-from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
-from sklearn.linear_model import LogisticRegression
-from sklearn.linear_model import SGDClassifier
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.neighbors import KNeighborsClassifier
-
-# %%
-# some function that we will use
-from sklearn.decomposition import PCA
-
-def colorplot(clf, ax, x, y, h=100, precomputer=None):
-    '''
-    Overlay the decision areas as colors in an axes.
-
-    Input:
-        clf: trained classifier
-        ax: axis to overlay color mesh on
-        x: feature on x-axis
-        y: feature on y-axis
-        h(optional): steps in the mesh
-    '''
-    # Create a meshgrid the size of the axis
-    xstep = (x.max() - x.min() ) / 20.0
-    ystep = (y.max() - y.min() ) / 20.0
-    x_min, x_max = x.min() - xstep, x.max() + xstep
-    y_min, y_max = y.min() - ystep, y.max() + ystep
-    h = max((x_max - x_min, y_max - y_min))/h
-    xx, yy = np.meshgrid(np.arange(x_min, x_max, h),
-                         np.arange(y_min, y_max, h))
-
-    features = np.c_[xx.ravel(), yy.ravel()]
-    if precomputer is not None:
-        if type(precomputer) is RBFSampler:
-            features = precomputer.transform(features)
-        elif precomputer is rbf_kernel:
-            features = rbf_kernel(features, X)
-
-    # Plot the decision boundary. For that, we will assign a color to each
-    # point in the mesh [x_min, x_max]x[y_min, y_max].
-    if hasattr(clf, "decision_function"):
-        Z = clf.decision_function(features)
+#%% --- 2. DATA VOORBEREIDING ---
+if USE_PCA:
+    # Gebruik alle numerieke kolommen behalve 'label'
+    X_raw = data.drop(columns=["label"])
+    title_prefix = "PCA Componenten (Totaaloverzicht)"
+else:
+    # Controleer of de features bestaan
+    if f1 in data.columns and f2 in data.columns:
+        X_raw = data[[f1, f2]]
+        title_prefix = f"Features: {f1.split('_')[-2]} vs {f2.split('_')[-2]}"
     else:
-        Z = clf.predict_proba(features)
-    if len(Z.shape) > 1:
-        Z = Z[:, 1]
+        print(f"FOUT: Een van de features ({f1} of {f2}) staat niet in de dataset!")
+        X_raw = data.drop(columns=["label"])
+        USE_PCA = True
 
-    # Put the result into a color plot
-    cm = plt.cm.RdBu_r
+# Schalen
+X_scaled = StandardScaler().fit_transform(X_raw)
+y_numeric = pd.factorize(data["label"])[0]
+
+if USE_PCA:
+    pca = PCA(n_components=2)
+    X_final = pca.fit_transform(X_scaled)
+else:
+    X_final = X_scaled 
+
+#%% --- 3. CLASSIFIERS INITIALISEREN ---
+clsfs = [
+    LinearDiscriminantAnalysis(),
+    QuadraticDiscriminantAnalysis(),
+    GaussianNB(),
+    LogisticRegression(),
+    KNeighborsClassifier(n_neighbors=5)
+]
+
+# Grid instellen
+fig, axes = plt.subplots(2, 3, figsize=(18, 10))
+axes = axes.flatten()
+results = []
+
+#%% --- 4. DE BENCHMARK LOOP ---
+for i, clf in enumerate(clsfs):
+    ax = axes[i]
+    
+    # Model trainen
+    clf.fit(X_final, y_numeric)
+    y_pred = clf.predict(X_final)
+    
+    # Achtergrond inkleuren -- Beslissingsvlakken
+    x_min, x_max = X_final[:, 0].min() - 1, X_final[:, 0].max() + 1
+    y_min, y_max = X_final[:, 1].min() - 1, X_final[:, 1].max() + 1
+    xx, yy = np.meshgrid(np.arange(x_min, x_max, 0.05), 
+                         np.arange(y_min, y_max, 0.05))
+
+    Z = clf.predict(np.c_[xx.ravel(), yy.ravel()])
     Z = Z.reshape(xx.shape)
-    ax.contourf(xx, yy, Z, cmap=cm, alpha=.8)
-    del xx, yy, x_min, x_max, y_min, y_max, Z, cm
 
-def load_data(n_features=2):
-    '''
-    Load the sklearn breast data set, but reduce the number of features with PCA.
-    '''
-    data = ds.load_data()
-    x = data['data']
-    y = data['target']
+    # Plot de grenzen en de data
+    ax.contourf(xx, yy, Z, alpha=0.2, cmap=plt.cm.Paired)
+    ax.scatter(X_final[:, 0], X_final[:, 1], c=y_numeric, 
+               s=40, edgecolor='k', cmap=plt.cm.Paired, alpha=0.9)
+    
+    # Styling en Labels
+    model_name = clf.__class__.__name__
+    errors = (y_numeric != y_pred).sum()
+    acc = (1 - errors/len(y_numeric)) * 100
+    
+    ax.set_title(f"{model_name}\nAcc: {acc:.1f}% ({errors} fouten)", fontsize=12)
+    
+    if USE_PCA:
+        ax.set_xlabel("PC1")
+        ax.set_ylabel("PC2")
+    else:
+        ax.set_xlabel(f1.split('_')[-2]) 
+        ax.set_ylabel(f2.split('_')[-2])
+    
+    ax.grid(True, linestyle=':', alpha=0.6)
+    results.append({'Model': model_name, 'Accuracy': acc, 'Errors': errors})
 
-    p = PCA(n_components=n_features)
-    p = p.fit(x)
-    x = p.transform(x)
-    return x, y
-# %%
-X1, Y1 = ds.make_classification(n_samples=100, n_features=2, n_redundant=0,
-                                n_informative=2,
-                                n_clusters_per_class=1)
-fig = plt.figure(figsize=(8, 8))
-ax = fig.add_subplot(111)
-ax.set_title("Two informative features, one cluster per class",
-             fontsize='small')
-ax.scatter(X1[:, 0], X1[:, 1], marker='o', c=Y1,
-           s=25, edgecolor='k', cmap=plt.cm.Paired)
-lda = LinearDiscriminantAnalysis()
-lda = lda.fit(X1, Y1)
-y_pred = lda.predict(X1)
-colorplot(lda, ax, X1[:, 0], X1[:, 1])
-print("Number of mislabeled points out of a total %d points : %d" % (X1.shape[0], (Y1 != y_pred).sum()))
+# Laatste subplot verwijderen en layout fixen
+fig.delaxes(axes[5])
+fig.suptitle(f"Benchmark: {title_prefix}", fontsize=16, y=1.02)
+plt.tight_layout()
+plt.show()
 
-
-# %%
-X2, Y2 = ds.make_classification(n_samples=100, n_features=2, n_redundant=0,
-                                n_informative=1,
-                                n_clusters_per_class=1)
-fig = plt.figure(figsize=(24, 8))
-ax = fig.add_subplot(131)
-ax.set_title("One informative feature, one cluster per class", fontsize='small')
-ax.scatter(X2[:, 0], X2[:, 1], marker='o', c=Y2,
-           s=25, edgecolor='k', cmap=plt.cm.Paired)
-
-X3, Y3 = ds.make_blobs(n_samples=100, n_features=2, centers=2, cluster_std=5)
-ax = fig.add_subplot(132)
-ax.set_title("Two blobs, two classes", fontsize='small')
-ax.scatter(X3[:, 0], X3[:, 1], marker='o', c=Y3, s=25, edgecolor='k', cmap=plt.cm.Paired)
-
-X_scaled = StandardScaler().fit_transform(X)
-pca = PCA(n_components=2)
-X4 = pca.fit_transform(X_scaled)
-
-# Zet de labels (y) om naar nummers (0 en 1) voor de plotter
-# 'lipoma' wordt 0, 'liposarcoma' wordt 1 (of andersom)
-Y4 = pd.factorize(y)[0]
-
-ax = fig.add_subplot(133)
-ax.set_title("A more complicated problem", fontsize='small')
-ax.scatter(X4[:, 0], X4[:, 1], marker='o', c=Y4, s=25, edgecolor='k', cmap=plt.cm.Paired)
-
-
-# %%
-#   - GaussianNB
-#   - LinearDiscriminantAnalysis
-#   - QuadraticDiscriminantAnalysis
-#   - LogisticRegression
-#   - SGDClassifier
-#   - KNeighborsClassifier
-#   Motivate your choice. You can use the example code below to loop over both
-#   the datasets and the classifiers at the same time:
-
-
-clsfs = [LinearDiscriminantAnalysis(),QuadraticDiscriminantAnalysis(),GaussianNB(),
-         LogisticRegression(),SGDClassifier(),KNeighborsClassifier()]
-Xs = [X2, X3, X4]
-Ys = [Y2, Y3, Y4]
-clfs_fit = list()
-
-# First make a plot without classifiers:
-fig = plt.figure(figsize=(21,7*len(clsfs)))
-num = 0  # Iteration number for the subplots
-for X, Y in zip(Xs, Ys):
-    ax = fig.add_subplot(6, 3, num + 1)
-    ax.scatter(X[:, 0], X[:, 1], marker='o', c=Y,
-               s=25, edgecolor='k', cmap=plt.cm.Paired)
-    num += 1
-
-# Fit the classifiers and add them to the plot
-num=0
-Xt=list()
-Yt=list()
-for clf in clsfs:
-    for X, Y in zip(Xs, Ys):
-        # Fit classifier
-        clf.fit(X,Y)
-        y_pred=clf.predict(X)
-        # Predict labels using fitted classifier
-
-        # Make scatterplot of features
-        ax = fig.add_subplot(6, 3, num + 1)
-        ax.scatter(X[:, 0], X[:, 1], marker='o', c=Y,
-               s=25, edgecolor='k', cmap=plt.cm.Paired)
-        colorplot(clf, ax, X[:,0], X[:,1])
-        # Add overlay through colorplot function
-        t=("Misclass: %d / %d" % ((Y!=y_pred).sum(), X.shape[0]))
-        ax.set_title(t)
-        num+=1
-
-        clfs_fit.append(clf)
-        Xt.append(X)
-        Yt.append(Y)
+# --- 5. RESULTATEN TABEL ---
+print("\n" + "="*40)
+print(f"EINDRESULTATEN: {title_prefix}")
+print("="*40)
+df_results = pd.DataFrame(results).sort_values(by='Accuracy', ascending=False)
+print(df_results.to_string(index=False))
 # %%
