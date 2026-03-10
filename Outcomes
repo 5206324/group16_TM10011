@@ -6,16 +6,16 @@
 # y_pred = = voorspelde klasse : clf.predict(X_test) (hierbij is X_test dus vd testdata)
 # clf = classifier model
 
-def outcomes(Y1, y_score, y_pred, clf):
+def outcomes(y_test, y_score, y_pred, model):
     from sklearn import metrics
 
-    auc=metrics.roc_auc_score(Y1, y_score)
-    accuracy=metrics.accuracy_score(Y1, y_pred)
-    F1=metrics.f1_score(Y1,y_pred)
-    precision=metrics.precision_score(Y1,y_pred)
-    recall=metrics.recall_score(Y1, y_pred)
+    auc=metrics.roc_auc_score(y_test, y_score)
+    accuracy=metrics.accuracy_score(y_test, y_pred)
+    F1=metrics.f1_score(y_test,y_pred)
+    precision=metrics.precision_score(y_test,y_pred)
+    recall=metrics.recall_score(y_test, y_pred)
 # accuracy, AUC, f1score, precision, recall
-    print(type(clf))
+    print(type(model))
     print('Acc:' +str(accuracy))
     print('AUC:' +str(auc))
     print('F1:' +str(F1))

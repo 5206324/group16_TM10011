@@ -62,6 +62,8 @@ for fold, (train_index, test_index) in enumerate(skf.split(X, y), 1):
     
     # 4. Make predictions on the test fold
     y_pred = model.predict(X_test_scaled)
+    y_score = model.predict_proba(X_test_scaled)[:, 1]
+
     
     # 5. Evaluate and store the metric
     accuracy = metrics.accuracy_score(y_test, y_pred)
@@ -71,4 +73,7 @@ for fold, (train_index, test_index) in enumerate(skf.split(X, y), 1):
 
 print("-" * 35)
 print(f"Average Accuracy: {np.mean(fold_accuracies):.4f} (± {np.std(fold_accuracies):.4f})")
-# %%
+# %% uitkomsten bepalen
+
+from Outcomes import outcomes
+auc, acc, f1, prec, rec = outcomes(y_test, y_score, y_pred, model)
