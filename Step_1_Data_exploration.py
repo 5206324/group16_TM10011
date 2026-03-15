@@ -1,8 +1,10 @@
 #%% importeren
-
-import pandas as pd
 import os
+import sys
+import shutil
 from sklearn.model_selection import StratifiedKFold
+from streamline.runners.dataprocess_runner import DataProcessRunner
+import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib.pyplot as plt
@@ -10,192 +12,149 @@ from sklearn import datasets as ds
 from sklearn import metrics
 
 path = ("/Users/fenne/Documents/Technical Medicine/TM10011/Project/group16_TM10011/Lipo_radiomicFeatures.csv")
+sys.path.append(os.getcwd())
 
 def load_data():
     this_directory = os.path.dirname(os.path.abspath(__file__))
     data = pd.read_csv(os.path.join(this_directory, 'Lipo_radiomicFeatures.csv'), index_col=0)
 
     return data
-
-
 data = load_data()
 
-# %% Classifiers aanhalen
-from sklearn.preprocessing import StandardScaler
-from sklearn.decomposition import PCA
 
-from sklearn.discriminant_analysis import LinearDiscriminantAnalysis, QuadraticDiscriminantAnalysis
-from sklearn.naive_bayes import GaussianNB
-from sklearn.linear_model import LogisticRegression, SGDClassifier
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.ensemble import RandomForestClassifier
+# %% STREAMLINE Phase 1 - Run parameters
+demo_run = False
+use_data_prompt = False
 
-# List to loop through later
-models_to_test = [
-    ('LogReg', LogisticRegression()),
-    ('LDA', LinearDiscriminantAnalysis()),
-    ('RF', RandomForestClassifier()),
-    ('KNN', KNeighborsClassifier(n_neighbors=5))
-]
-# %% feature summary
-feature_summary = {}
+def setup_pipeline_folders(experiment_name, data_path):
+    """Maakt de mappenstructuur aan zoals STREAMLINE dat verwacht."""
+    base_path = os.path.dirname(data_path)
+    
+    # Maak UserOutput en UserData mappen aan
+    output_folder = os.path.join(base_path, 'UserOutput', experiment_name)
+    custom_data_path = os.path.join(base_path, 'UserData')
 
-for col in data.columns:
-    if "_sf_" in col:
-        base = col.split("_sf_")[1].split("_")[0]
-        stat = col.split(base + "_")[1].split("_")[0]
-        
-        if base not in feature_summary:
-            feature_summary[base] = []
+    for folder in [output_folder, custom_data_path]:
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+            print(f"Map aangemaakt: {folder}")
             
-        feature_summary[base].append(stat)
+    return output_folder, custom_data_path
 
-for k, v in feature_summary.items():
-    print(k, ":", sorted(v))
-# %% print verdeling
-lipoma = data[data["label"] == "lipoma"]
-liposarcoma = data[data["label"] == "liposarcoma"]
+if not demo_run:
+    # Paden aanmaken 
+    base_folder = '/Users/fenne/Documents/Technical Medicine/TM10011/Project/group16_TM10011'
+    output_path = os.path.join(base_folder, 'Lipo_Results')
+    experiment_name = 'Lipo_Analysis_Step1_6'
 
-print("Lipoma:", lipoma.shape)
-print("Liposarcoma:", liposarcoma.shape)
-
- #%%Label verdeling
-lipoma = data[data["label"] == "lipoma"]
-liposarcoma = data[data["label"] == "liposarcoma"]
-
-alle_kolommen = data.columns.tolist()
-print(f"TOTALE FEATURES GEONDEN: {len(alle_kolommen)}")
-print("-" * 40)
-
-for i, col in enumerate(alle_kolommen, 1):
-    # Print index en de volledige naam van de kolom
-    print(f"{i:03}. {col}")
-
-print("-" * 40)
-# %% Feature exploration --- oppervlakte
-area_cols = [
-'PREDICT_original_sf_area_avg_2.5D',
-'PREDICT_original_sf_area_max_2.5D',
-'PREDICT_original_sf_area_min_2.5D',
-'PREDICT_original_sf_area_std_2.5D'
-]
-
-graph_titles = {
-    'PREDICT_original_sf_area_avg_2.5D': 'Average Tumor Area',
-    'PREDICT_original_sf_area_max_2.5D': 'Maximum Tumor Area',
-    'PREDICT_original_sf_area_min_2.5D': 'Minimum Tumor Area',
-    'PREDICT_original_sf_area_std_2.5D': 'Area Standard Deviation'
-}
-
-fig, axes = plt.subplots(2, 2, figsize=(12,8))
-
-for i, col in enumerate(area_cols):
-    ax = axes[i//2, i%2]
-    
-    ax.hist(lipoma[col], bins=30, alpha=0.5, label="lipoma")
-    ax.hist(liposarcoma[col], bins=30, alpha=0.5, label="liposarcoma")
-    ax.set_title(graph_titles[col], fontsize=12, fontweight='bold')
-    ax.set_xlabel("Area value")
-    ax.set_ylabel("Frequency")
-    ax.legend()
-
-plt.tight_layout()
-plt.show()
-
-# %% Feature exploration --- visualisatie
-#%% --- 1. CONFIGURATIE ---
-USE_PCA = False 
-f1 = 'PREDICT_original_sf_roughness_avg_2.5D'
-f2 = 'PREDICT_original_sf_convexity_avg_2.5D'
-
-#%% --- 2. DATA VOORBEREIDING ---
-if USE_PCA:
-    # Gebruik alle numerieke kolommen behalve 'label'
-    X_raw = data.drop(columns=["label"])
-    title_prefix = "PCA Componenten (Totaaloverzicht)"
-else:
-    # Controleer of de features bestaan
-    if f1 in data.columns and f2 in data.columns:
-        X_raw = data[[f1, f2]]
-        title_prefix = f"Features: {f1.split('_')[-2]} vs {f2.split('_')[-2]}"
+    # Mappen aanmaken
+    if not os.path.exists(output_path):
+        os.makedirs(output_path)
+        print(f"Succes! Map aangemaakt op: {output_path}")
     else:
-        print(f"FOUT: Een van de features ({f1} of {f2}) staat niet in de dataset!")
-        X_raw = data.drop(columns=["label"])
-        USE_PCA = True
+        print(f"Map bestond al op: {output_path}")
 
-# Schalen
-X_scaled = StandardScaler().fit_transform(X_raw)
-y_numeric = pd.factorize(data["label"])[0]
+    output_path, custom_data_path = setup_pipeline_folders(experiment_name, data_path)
 
-if USE_PCA:
-    pca = PCA(n_components=2)
-    X_final = pca.fit_transform(X_scaled)
-else:
-    X_final = X_scaled 
+    #Pipeline parameters
+    class_label = 'label'
+    instance_label = 'ID'
+    match_label = None
+    #applyToReplication = False
+    #rep_data_path = None
+    #dataset_for_rep = data_path
 
-#%% --- 3. CLASSIFIERS INITIALISEREN ---
-clsfs = [
-    LinearDiscriminantAnalysis(),
-    QuadraticDiscriminantAnalysis(),
-    GaussianNB(),
-    LogisticRegression(),
-    KNeighborsClassifier(n_neighbors=5)
-]
+    #Leaving out features
+    ignore_features = [] #als we kolommen willen gaan negeren
+    categorical_feature_headers = None
+    quantitiative_feature_headers = [
+        col for col in data.columns 
+        if col not in [class_label, instance_label] + ignore_features
+    ]
 
-# Grid instellen
-fig, axes = plt.subplots(2, 3, figsize=(18, 10))
-axes = axes.flatten()
-results = []
+    print(f"Aantal kwantitatieve features geïdentificeerd: {len(quantitiative_feature_headers)}")
+    print(f"\n--- Pipeline Setup Gereed ---")
+    print(f"Experiment: {experiment_name}")
+    print(f"Resultaten worden opgeslagen in: {output_path}")
 
-#%% --- 4. DE BENCHMARK LOOP ---
-for i, clf in enumerate(clsfs):
-    ax = axes[i]
-    
-    # Model trainen
-    clf.fit(X_final, y_numeric)
-    y_pred = clf.predict(X_final)
-    
-    # Achtergrond inkleuren -- Beslissingsvlakken
-    x_min, x_max = X_final[:, 0].min() - 1, X_final[:, 0].max() + 1
-    y_min, y_max = X_final[:, 1].min() - 1, X_final[:, 1].max() + 1
-    xx, yy = np.meshgrid(np.arange(x_min, x_max, 0.05), 
-                         np.arange(y_min, y_max, 0.05))
+ #%% STREAMLINE Phase 1 - Cross Validation (CV)
+n_splits = 3  # 
+partition_method = 'Stratified' 
 
-    Z = clf.predict(np.c_[xx.ravel(), yy.ravel()])
-    Z = Z.reshape(xx.shape)
+# Cutoffs
+categorical_cutoff = 10 
+sig_cutoff = 0.05 
 
-    # Plot de grenzen en de data
-    ax.contourf(xx, yy, Z, alpha=0.2, cmap=plt.cm.Paired)
-    ax.scatter(X_final[:, 0], X_final[:, 1], c=y_numeric, 
-               s=40, edgecolor='k', cmap=plt.cm.Paired, alpha=0.9)
-    
-    # Styling en Labels
-    model_name = clf.__class__.__name__
-    errors = (y_numeric != y_pred).sum()
-    acc = (1 - errors/len(y_numeric)) * 100
-    
-    ax.set_title(f"{model_name}\nAcc: {acc:.1f}% ({errors} fouten)", fontsize=12)
-    
-    if USE_PCA:
-        ax.set_xlabel("PC1")
-        ax.set_ylabel("PC2")
-    else:
-        ax.set_xlabel(f1.split('_')[-2]) 
-        ax.set_ylabel(f2.split('_')[-2])
-    
-    ax.grid(True, linestyle=':', alpha=0.6)
-    results.append({'Model': model_name, 'Accuracy': acc, 'Errors': errors})
+# Set Random Seed for Reproducible Analysis
+random_state = 42 
 
-# Laatste subplot verwijderen en layout fixen
-fig.delaxes(axes[5])
-fig.suptitle(f"Benchmark: {title_prefix}", fontsize=16, y=1.02)
-plt.tight_layout()
-plt.show()
+# EDA outpute file controls (None, outputs all files)
+exclude_eda_output = None 
+top_uni_features = 20 
 
-# --- 5. RESULTATEN TABEL ---
-print("\n" + "="*40)
-print(f"EINDRESULTATEN: {title_prefix}")
-print("="*40)
-df_results = pd.DataFrame(results).sort_values(by='Accuracy', ascending=False)
-print(df_results.to_string(index=False))
+# Data processing parameters (cleaning and feature engineering)
+featureeng_missingness = 0.5 
+cleaning_missingness = 0.5 
+correlation_removal_threshold = 1 
+
+# %% STREAMLINE Phase 1 - Uitvoering
+
+
+# We maken de runner aan met alle parameters die je eerder hebt gedefinieerd
+dpr = DataProcessRunner(data_path, output_path, experiment_name,
+                exclude_eda_output=exclude_eda_output,
+                class_label=class_label, instance_label=instance_label,
+                match_label=match_label, n_splits=n_splits,
+                partition_method=partition_method,
+                ignore_features=ignore_features,
+                categorical_features=categorical_feature_headers,
+                quantitative_features=quantitiative_feature_headers,
+                top_features=top_uni_features,
+                categorical_cutoff=categorical_cutoff, sig_cutoff=sig_cutoff,
+                featureeng_missingness=featureeng_missingness,
+                cleaning_missingness=cleaning_missingness,
+                correlation_removal_threshold=correlation_removal_threshold,
+                random_state=random_state, show_plots=True)
+
+# Start de analyse
+print("Starten van STREAMLINE Stap 1")
+dpr.run(run_parallel=False) 
+print("Stap 1 voltooid")
+# %
+
+#%%
+# %% STREAMLINE Phase 1 - Uitvoering (Gecorrigeerd)
+import os
+import pandas as pd
+from streamline.runners.dataprocess_runner import DataProcessRunner
+
+# 1. SCHONE PADEN
+path = "/Users/fenne/Documents/Technical Medicine/TM10011/Project/group16_TM10011/Lipo_radiomicFeatures.csv"
+# We maken één specifieke map voor ALLES
+output_path = "/Users/fenne/Documents/Technical Medicine/TM10011/Project/group16_TM10011/STREAMLINE_OUTPUT"
+
+if not os.path.exists(output_path):
+    os.makedirs(output_path)
+
+# 2. DATA CHECK (Even kijken of hij de data wel echt ziet)
+data = pd.read_csv(path, index_col=0)
+print(f"Data geladen! Aantal patiënten: {len(data)}")
+
+# 3. DE RUNNER
+experiment_name = 'Clean_Run_V1'
+
+dpr = DataProcessRunner(
+    path, 
+    output_path, 
+    experiment_name,
+    class_label='label', 
+    instance_label='ID',
+    n_splits=3,
+    quantitative_features=[col for col in data.columns if col not in ['label', 'ID']],
+    show_plots=False # We zetten dit uit om de 'lege mappen' bug te omzeilen
+)
+
+print("Analyse start... even geduld...")
+dpr.run(run_parallel=False)
+print(f"Klaar! Kijk nu alleen in: {output_path}/{experiment_name}")
 # %%
