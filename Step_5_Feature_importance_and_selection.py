@@ -65,7 +65,7 @@ classifiers = {
 results = {}
 best_estimators = {}
 #%% Inner-outer loop maken
-outer_cv = KFold(n_splits=5, shuffle=True, random_state=42)
+outer_cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 
 nested_results = {}
 
@@ -74,7 +74,7 @@ for name, (clf, params) in classifiers.items():
     full_pipeline = Pipeline(steps = common_steps + [('clf', clf)])
     
     # hij splits hem nu op in 3 groepen om te testen op accuracy van verschillende waardes voor de hyperparameters
-    inner_testing = GridSearchCV(full_pipeline, param_grid=params, cv=3, scoring='accuracy')
+    inner_testing = GridSearchCV(full_pipeline, param_grid=params, cv=StratifiedKFold(n_splits=3), scoring='accuracy')
     
     # De hiervoor gekozen waardes gebruiken voor score berekenen op de outer loop
     outer_scores = cross_val_score(inner_testing, X, y, cv=outer_cv)
@@ -120,8 +120,24 @@ common_steps = [
 results = {}
 best_estimators = {}
 
+classifiers = {
+    'RandomForest': (RandomForestClassifier(random_state=42), {
+        'pca__n_components': [5, 10, 15, 0.95], # Probeer 5, 10, 15 óf genoeg voor 95% variantie
+        'clf__n_estimators': [50, 100, 150],
+        'clf__max_depth': [None, 10]
+    }),
+    'LogisticRegression': (LogisticRegression(max_iter=1000), {
+        'pca__n_components': [5, 10, 15, 0.95],
+        'clf__C': [0.001, 0.01, 0.1, 1, 10]
+    }),
+    'KNN': (KNeighborsClassifier(), {
+        'pca__n_components': [5, 10, 15, 0.95],
+        'clf__n_neighbors': [3, 5, 11]
+    })
+}
+
 # %% inner-outer loop maken
-outer_cv = KFold(n_splits=5, shuffle=True, random_state=42)
+outer_cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 
 nested_results = {}
 
@@ -130,7 +146,7 @@ for name, (clf, params) in classifiers.items():
     full_pipeline = Pipeline(steps = common_steps + [('clf', clf)])
     
     # hij splits hem nu op in 3 groepen om te testen op accuracy van verschillende waardes voor de hyperparameters
-    inner_testing = GridSearchCV(full_pipeline, param_grid=params, cv=3, scoring='accuracy')
+    inner_testing = GridSearchCV(full_pipeline, param_grid=params, cv=StratifiedKFold(n_splits=3), scoring='accuracy')
     
     # De hiervoor gekozen waardes gebruiken voor score berekenen op de outer loop
     outer_scores = cross_val_score(inner_testing, X, y, cv=outer_cv)
