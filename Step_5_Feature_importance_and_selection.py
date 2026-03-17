@@ -22,6 +22,7 @@ from sklearn.impute import SimpleImputer
 from sklearn.feature_selection import VarianceThreshold
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import cross_val_score, KFold
 
 path = (r"C:\Bestanden\Technische Universiteit Delft\Master Technical Medicine\Machine learning TM10011\GroepsprojectML\group16_TM10011\Lipo_radiomicFeatures.csv")
 
@@ -35,21 +36,19 @@ data = load_data()
 print(data.columns)
 
 
-#%% feature importance + selection (zonder PCA)
+#%% feature importance + selection
 
 X = data.drop('label', axis=1) 
 y = data['label']
 feature_names = X.columns
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, stratify=y, random_state=42)
 
-# lege cellen vullen, kolommen met zelfde waarden weghalen, features op zelfde schaal zetten, pca 
+#%% Preprocessing: lege cellen vullen, kolommen met zelfde waarden weghalen, features op zelfde schaal zetten, pca 
 common_steps = [
     ('imputer', SimpleImputer(strategy='mean')),
     ('variance', VarianceThreshold(threshold=0.01)),
     ('scaler', StandardScaler()),
 ]
-
-# classifiers bepalen en hun hyperparameters
+# %% Classifiers bepalen en hun hyperparameters
 classifiers = {
     'RandomForest': (RandomForestClassifier(random_state=42), {
         'clf__n_estimators': [50, 100, 150],
@@ -65,32 +64,34 @@ classifiers = {
 
 results = {}
 best_estimators = {}
+#%% Inner-outer loop maken
+outer_cv = KFold(n_splits=5, shuffle=True, random_state=42)
 
-# common_steps koppelen aan classifiers, optimale hyperparameters bepalen met grid, crossvalidation (knipt in 5 stukken:4x trainen 1x testen)
+nested_results = {}
+
 for name, (clf, params) in classifiers.items():
-    # Maak de volledige pipeline voor DIT model
+    # De Pipeline maken: common steps + classifier
     full_pipeline = Pipeline(steps = common_steps + [('clf', clf)])
     
-    # GridSearch setup
-    grid = GridSearchCV(full_pipeline, param_grid=params, cv=5, scoring='accuracy')
-    grid.fit(X_train, y_train)
+    # hij splits hem nu op in 3 groepen om te testen op accuracy van verschillende waardes voor de hyperparameters
+    inner_testing = GridSearchCV(full_pipeline, param_grid=params, cv=3, scoring='accuracy')
     
-    # Sla resultaten op
-    results[name] = {
-        'best_score': grid.best_score_,
-        'test_score': grid.score(X_test, y_test),
-        'best_params': grid.best_params_
+    # De hiervoor gekozen waardes gebruiken voor score berekenen op de outer loop
+    outer_scores = cross_val_score(inner_testing, X, y, cv=outer_cv)
+    
+    # Bepalen van de resultaten (gemiddelde van de 5 waardes en de std)
+    nested_results[name] = {
+        'scores': outer_scores,
+        'mean_score': outer_scores.mean(),
+        'std_score': outer_scores.std()
     }
-    best_estimators[name] = grid.best_estimator_
     
-    print(f"{name} heeft beste train-score van: {grid.best_score_:.3f}")
+    print(f"{name} gemiddelde score zonder PCA: {outer_scores.mean():.3f} (+/- {outer_scores.std():.3f})")
 
-# 5. Resultaten bekijken
-print("\nEindresultaten op de test-set:")
-for name, res in results.items():
-    print(f"{name}: {res['test_score']:.3f} (Params: {res['best_params']})")
+# %% Feature importance bepalen
 
-best_rf_pipeline = best_estimators['RandomForest']
+best_rf_pipeline = Pipeline(steps=common_steps + [('clf', classifiers['RandomForest'][0])])
+best_rf_pipeline.fit(X, y)
 importances = best_rf_pipeline.named_steps['clf'].feature_importances_
 
 # Let op: VarianceThreshold heeft mogelijk features verwijderd. 
@@ -109,12 +110,6 @@ plt.ylabel("Importance score")
 plt.tight_layout()
 plt.show()
 #%% Feature selection met PCA
-
-X = data.drop('label', axis=1) 
-y = data['label']
-feature_names = X.columns
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, stratify=y, random_state=42)
-
 # lege cellen vullen, kolommen met zelfde waarden weghalen, features op zelfde schaal zetten, pca 
 common_steps = [
     ('imputer', SimpleImputer(strategy='mean')),
@@ -122,47 +117,31 @@ common_steps = [
     ('scaler', StandardScaler()),
     ('pca', PCA(n_components=2))
 ]
-
-# classifiers bepalen en hun hyperparameters
-classifiers = {
-    'RandomForest': (RandomForestClassifier(random_state=42), {
-        'clf__n_estimators': [50, 100, 150],
-        'clf__max_depth': [None, 10]
-    }),
-    'LogisticRegression': (LogisticRegression(max_iter=1000), {
-        'clf__C': [0.001, 0.01, 0.1, 1, 10, 100]
-    }),
-    'KNN': (KNeighborsClassifier(), {
-        'clf__n_neighbors': [3, 5, 11]
-    })
-}
-
 results = {}
 best_estimators = {}
 
-# common_steps koppelen aan classifiers, optimale hyperparameters bepalen met grid, crossvalidation (knipt in 5 stukken:4x trainen 1x testen)
+# %% inner-outer loop maken
+outer_cv = KFold(n_splits=5, shuffle=True, random_state=42)
+
+nested_results = {}
+
 for name, (clf, params) in classifiers.items():
-    # Maak de volledige pipeline voor DIT model
+    # De Pipeline maken: common steps + classifier
     full_pipeline = Pipeline(steps = common_steps + [('clf', clf)])
     
-    # GridSearch setup
-    grid = GridSearchCV(full_pipeline, param_grid=params, cv=5, scoring='accuracy')
-    grid.fit(X_train, y_train)
+    # hij splits hem nu op in 3 groepen om te testen op accuracy van verschillende waardes voor de hyperparameters
+    inner_testing = GridSearchCV(full_pipeline, param_grid=params, cv=3, scoring='accuracy')
     
-    # Sla resultaten op
-    results[name] = {
-        'best_score': grid.best_score_,
-        'test_score': grid.score(X_test, y_test),
-        'best_params': grid.best_params_
+    # De hiervoor gekozen waardes gebruiken voor score berekenen op de outer loop
+    outer_scores = cross_val_score(inner_testing, X, y, cv=outer_cv)
+    
+    # Bepalen van de resultaten (gemiddelde van de 5 waardes en de std)
+    nested_results[name] = {
+        'scores': outer_scores,
+        'mean_score': outer_scores.mean(),
+        'std_score': outer_scores.std()
     }
-    best_estimators[name] = grid.best_estimator_
     
-    print(f"{name} heeft beste train-score van: {grid.best_score_:.3f}")
-
-# 5. Resultaten bekijken
-print("\nEindresultaten op de test-set:")
-for name, res in results.items():
-    print(f"{name}: {res['test_score']:.3f} (Params: {res['best_params']})")
-
+    print(f"{name} gemiddelde score met PCA: {outer_scores.mean():.3f} (+/- {outer_scores.std():.3f})")
 
 # %%
