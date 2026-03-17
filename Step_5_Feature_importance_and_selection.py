@@ -21,6 +21,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.impute import SimpleImputer
 from sklearn.feature_selection import VarianceThreshold
 from sklearn.pipeline import Pipeline
+from sklearn.model_selection import GridSearchCV
 
 path = (r"C:\Bestanden\Technische Universiteit Delft\Master Technical Medicine\Machine learning TM10011\GroepsprojectML\group16_TM10011\Lipo_radiomicFeatures.csv")
 
@@ -33,67 +34,135 @@ def load_data():
 data = load_data()
 print(data.columns)
 
-#%% feature importance
-# 1. Gebruik je eigen ingeladen data
+
+#%% feature importance + selection (zonder PCA)
+
 X = data.drop('label', axis=1) 
 y = data['label']
+feature_names = X.columns
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, stratify=y, random_state=42)
 
-# 2. Data opschonen (Essentieel: Random Forest kan niet tegen NaN-waardes)
-imputer = SimpleImputer(strategy='median')
-X_imputed = imputer.fit_transform(X)
-feature_names = X.columns # Bewaar de namen voor de grafiek
+# lege cellen vullen, kolommen met zelfde waarden weghalen, features op zelfde schaal zetten, pca 
+common_steps = [
+    ('imputer', SimpleImputer(strategy='mean')),
+    ('variance', VarianceThreshold(threshold=0.01)),
+    ('scaler', StandardScaler()),
+]
 
-# 3. Train het model op jouw ECHTE data
-forest = RandomForestClassifier(n_estimators=100, random_state=42)
-forest.fit(X_imputed, y)
+# classifiers bepalen en hun hyperparameters
+classifiers = {
+    'RandomForest': (RandomForestClassifier(random_state=42), {
+        'clf__n_estimators': [50, 100, 150],
+        'clf__max_depth': [None, 10]
+    }),
+    'LogisticRegression': (LogisticRegression(max_iter=1000), {
+        'clf__C': [0.001, 0.01, 0.1, 1, 10, 100]
+    }),
+    'KNN': (KNeighborsClassifier(), {
+        'clf__n_neighbors': [3, 5, 11]
+    })
+}
 
-# 4. Bereken importance en variatie
-importances = forest.feature_importances_
-std = np.std([tree.feature_importances_ for tree in forest.estimators_], axis=0)
+results = {}
+best_estimators = {}
+
+# common_steps koppelen aan classifiers, optimale hyperparameters bepalen met grid, crossvalidation (knipt in 5 stukken:4x trainen 1x testen)
+for name, (clf, params) in classifiers.items():
+    # Maak de volledige pipeline voor DIT model
+    full_pipeline = Pipeline(steps = common_steps + [('clf', clf)])
+    
+    # GridSearch setup
+    grid = GridSearchCV(full_pipeline, param_grid=params, cv=5, scoring='accuracy')
+    grid.fit(X_train, y_train)
+    
+    # Sla resultaten op
+    results[name] = {
+        'best_score': grid.best_score_,
+        'test_score': grid.score(X_test, y_test),
+        'best_params': grid.best_params_
+    }
+    best_estimators[name] = grid.best_estimator_
+    
+    print(f"{name} heeft beste train-score van: {grid.best_score_:.3f}")
+
+# 5. Resultaten bekijken
+print("\nEindresultaten op de test-set:")
+for name, res in results.items():
+    print(f"{name}: {res['test_score']:.3f} (Params: {res['best_params']})")
+
+best_rf_pipeline = best_estimators['RandomForest']
+importances = best_rf_pipeline.named_steps['clf'].feature_importances_
+
+# Let op: VarianceThreshold heeft mogelijk features verwijderd. 
+# We moeten de namen matchen met de overgebleven features.
+mask = best_rf_pipeline.named_steps['variance'].get_support()
+reduced_feature_names = feature_names[mask]
+
 indices = np.argsort(importances)[::-1]
+top_n = 10
 
-print("Feature ranking:")
-
-for f in range(X.shape[1]):
-    print("%d. feature %d (%f)" % (f + 1, indices[f], importances[indices[f]]))
-
-    plt.figure()
-plt.title("Feature importances")
-plt.bar(range(X.shape[1]), importances[indices],
-       color="r", yerr=std[indices], align="center")
-plt.xticks(range(X.shape[1]), indices)
-plt.xlim([-1, X.shape[1]])
-plt.show()
-
-# 5. Plot de Top 20 belangrijkste features van jouw dataset
-top_n = 20
 plt.figure(figsize=(12, 6))
-plt.title("Belangrijkste Radiomic Features voor Lipo Dataset")
-plt.bar(range(top_n), importances[indices[:top_n]],
-       color="r", yerr=std[indices[:top_n]], align="center")
-
-# Gebruik de echte namen van de kolommen op de x-as
-plt.xticks(range(top_n), [feature_names[i] for i in indices[:top_n]], rotation=45, ha='right')
-plt.xlim([-1, top_n])
+plt.title("Top 10 Belangrijkste Radiomic Features (Random Forest)")
+plt.bar(range(top_n), importances[indices[:top_n]], color="r", align="center")
+plt.xticks(range(top_n), reduced_feature_names[indices[:top_n]], rotation=45, ha='right')
+plt.ylabel("Importance score")
 plt.tight_layout()
 plt.show()
+#%% Feature selection met PCA
 
-#%% Feature selection
+X = data.drop('label', axis=1) 
+y = data['label']
+feature_names = X.columns
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, stratify=y, random_state=42)
 
-# nodig: X_train, X_test, X
+# lege cellen vullen, kolommen met zelfde waarden weghalen, features op zelfde schaal zetten, pca 
+common_steps = [
+    ('imputer', SimpleImputer(strategy='mean')),
+    ('variance', VarianceThreshold(threshold=0.01)),
+    ('scaler', StandardScaler()),
+    ('pca', PCA(n_components=2))
+]
 
-pipeline = Pipeline([
-    ('imputer', SimpleImputer(strategy='mean')),     # Missing data invullen
-    ('variance', VarianceThreshold(threshold=0.01)), # Verwijder constante features
-    ('scaler', StandardScaler()),                    # PCA vereist gestandaardiseerde data
-    ('pca', PCA(n_components=2))                     # Reduceer naar 2 componenten
-])
+# classifiers bepalen en hun hyperparameters
+classifiers = {
+    'RandomForest': (RandomForestClassifier(random_state=42), {
+        'clf__n_estimators': [50, 100, 150],
+        'clf__max_depth': [None, 10]
+    }),
+    'LogisticRegression': (LogisticRegression(max_iter=1000), {
+        'clf__C': [0.001, 0.01, 0.1, 1, 10, 100]
+    }),
+    'KNN': (KNeighborsClassifier(), {
+        'clf__n_neighbors': [3, 5, 11]
+    })
+}
 
-X_train_transformed = pipeline.fit_transform(X_train)
-X_test_transformed = pipeline.transform(X_test)
+results = {}
+best_estimators = {}
 
-print(f"Oorspronkelijke vorm: {X.shape}")
-print(f"Vorm na selectie en PCA: {X_transformed.shape}")
+# common_steps koppelen aan classifiers, optimale hyperparameters bepalen met grid, crossvalidation (knipt in 5 stukken:4x trainen 1x testen)
+for name, (clf, params) in classifiers.items():
+    # Maak de volledige pipeline voor DIT model
+    full_pipeline = Pipeline(steps = common_steps + [('clf', clf)])
+    
+    # GridSearch setup
+    grid = GridSearchCV(full_pipeline, param_grid=params, cv=5, scoring='accuracy')
+    grid.fit(X_train, y_train)
+    
+    # Sla resultaten op
+    results[name] = {
+        'best_score': grid.best_score_,
+        'test_score': grid.score(X_test, y_test),
+        'best_params': grid.best_params_
+    }
+    best_estimators[name] = grid.best_estimator_
+    
+    print(f"{name} heeft beste train-score van: {grid.best_score_:.3f}")
+
+# 5. Resultaten bekijken
+print("\nEindresultaten op de test-set:")
+for name, res in results.items():
+    print(f"{name}: {res['test_score']:.3f} (Params: {res['best_params']})")
 
 
 # %%
