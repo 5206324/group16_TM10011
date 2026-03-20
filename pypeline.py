@@ -1,23 +1,69 @@
-# %% Step 1: Data exploration
-#from Step_1_Data_exploration.py import ...
-# Benodigde pakketten
+# %% --- Step 1: Data exploration ---
 import pandas as pd
 from pathlib import Path
+from sklearn.model_selection import StratifiedKFold
 import sys
 
-# Data inladen - vanuit folder ipv path
-# Definitie van maken om zo weer te kunnen gebruiken in een ander
-
+# Data inladen
 sys.path.append(str(Path.cwd()))
 from Stap_1_Data_inladen import data_lipo 
 data = data_lipo("Lipo_radiomicFeatures.csv")
+if 'label' in data.columns:
+    data = data.set_index(data.columns[0])
 
-print("Data succesvol ingeladen!")
-print(data.head())
 
+# %% --- Step 2: k-fold cross validation ---
+from Stap_2_kfolds_splitsing import kfold
+from Stap_3_inner_loop import inner_loop
+from Stap_7_Data_verzameling import analyse, resultaten
 
-# %% Step 2: k-fold cross validation
-#from Step_2_k_fold_cross_validation.py import ...
+folds = kfold(data, target_column='label', n_splits=5)
+#alle_scores = []
+#alle_importances = []
+feature_names = data.drop(columns=['label']).columns
+alle_analyse_data =[]
+
+for i, pakketje in enumerate(folds):
+    print (f"\n--- Fold {i+1}---")
+
+    #Data ophalen
+    X_train_outer = pakketje['X_train']
+    X_test_outer = pakketje['X_test']
+    y_train_outer = pakketje['y_train']
+    y_test_outer = pakketje['y_test']
+
+    print(f"Train n={len(X_train_outer)}, Test n={len(X_test_outer)}")
+
+    # 4. Pak de trainingsdata (92 samples) en stuur naar de 'n training' fase
+    beste_model = inner_loop(X_train_outer, y_train_outer)
+    # Verander dit (regel 25-28 in je code):
+    data_fold = resultaten(beste_model, 
+                           X_train_outer, y_train_outer, # Deel 1: Train
+                           X_test_outer, y_test_outer,   # Deel 2: Test
+                           feature_names)                # Deel 3: Namen
+    
+    # Voeg toe aan onze grote lijst voor de finale analyse
+    alle_analyse_data.append(data_fold)
+
+    # HIER behoud je de zichtbare output per fold:
+    print(f"Fold {i+1} - Train Acc: {data_fold['train_acc']:.2%}")
+    print(f"Fold {i+1} - Test Acc: {data_fold['test_acc']:.2%}")
+    #print(f"Fold {i+1} - AUC: {data_fold['auc']:.2f}")
+    # Data verzamelen voor post-analyse
+ #   score, imp = verzamel_resultaten(beste_model_fold, pakketje['X_test'], 
+ #                                    pakketje['y_test'], feature_names)
+ #   
+ #   alle_scores.append(score)
+ #   if imp is not None:
+ #       alle_importances.append(imp)
+
+  #  print(f"Score Fold {i+1}: {score:.3f}")
+#if len(alle_analyse_data) == 5:
+#    toon_vergelijking(alle_analyse_data)
+#else:
+#    print(f"WAARSCHUWING: Er zijn maar {len(alle_analyse_data)} folds verwerkt!")
+
+#toon_vergelijking(alle_analyse_data)
 
 # %% Step 3: Imputation of missing values
 #from Step_3_Imputation_of_missing_values.py import ...
