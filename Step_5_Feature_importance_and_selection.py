@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from sklearn import datasets as ds
 from sklearn import metrics
 
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, RobustScaler
 from sklearn.decomposition import PCA
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis, QuadraticDiscriminantAnalysis
 from sklearn.naive_bayes import GaussianNB
@@ -23,6 +23,9 @@ from sklearn.feature_selection import VarianceThreshold
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import cross_val_score, KFold
+from sklearn.feature_selection import SelectKBest, f_classif
+from sklearn.feature_selection import RFE
+
 
 path = (r"C:\Bestanden\Technische Universiteit Delft\Master Technical Medicine\Machine learning TM10011\GroepsprojectML\group16_TM10011\Lipo_radiomicFeatures.csv")
 
@@ -44,9 +47,10 @@ feature_names = X.columns
 
 #%% Preprocessing: lege cellen vullen, kolommen met zelfde waarden weghalen, features op zelfde schaal zetten, pca 
 common_steps = [
-    ('imputer', SimpleImputer(strategy='mean')),
+    ('imputer', SimpleImputer(strategy='median')),
     ('variance', VarianceThreshold(threshold=0.01)),
-    ('scaler', StandardScaler()),
+    ('scaler', RobustScaler()),
+    ('rfe', RFE(estimator=LogisticRegression(max_iter=5000), n_features_to_select=20))
 ]
 # %% Classifiers bepalen en hun hyperparameters
 classifiers = {
@@ -54,7 +58,7 @@ classifiers = {
         'clf__n_estimators': [50, 100, 150],
         'clf__max_depth': [None, 10]
     }),
-    'LogisticRegression': (LogisticRegression(max_iter=1000), {
+    'LogisticRegression': (LogisticRegression(max_iter=5000), {
         'clf__C': [0.001, 0.01, 0.1, 1, 10, 100]
     }),
     'KNN': (KNeighborsClassifier(), {
@@ -115,7 +119,7 @@ common_steps = [
     ('imputer', SimpleImputer(strategy='mean')),
     ('variance', VarianceThreshold(threshold=0.01)),
     ('scaler', StandardScaler()),
-    ('pca', PCA(n_components=2))
+    ('pca', PCA())
 ]
 results = {}
 best_estimators = {}
