@@ -25,7 +25,7 @@ def inner_loop(X_train, y_train):
     # de RFE feature selection definiëren
     rfecv =  RFECV(
         estimator=estimator, 
-        step=1,               # Verwijder 1 feature per stap
+        step=1,               # Verwijder 1 feature pe-r stap
         cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=42),                 # Gebruik 5-fold CV om het beste aantal te vinden
         scoring='accuracy',   # Optimaliseer op nauwkeurigheid MISS MOET DIT AUC WORDEN!!
         min_features_to_select=10, # Stop niet voordat er nog maar 10 over zijn
