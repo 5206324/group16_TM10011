@@ -14,6 +14,7 @@ from sklearn.feature_selection import RFE
 from sklearn.svm import SVC
 from sklearn.feature_selection import RFECV
 from sklearn.model_selection import StratifiedKFold
+from xgboost import XGBClassifier
 
 
 def inner_loop(X_train, y_train):
@@ -41,55 +42,31 @@ def inner_loop(X_train, y_train):
             ('scaler', RobustScaler()),
             ('rfecv', rfecv)
         ]
-
         
         # 2. De lijst met classifiers en hun hyperparameters
     classifiers = {
             'RandomForest': (RandomForestClassifier(random_state=42), {
                 'clf__n_estimators': [50, 100, 150],
-                'clf__max_depth': [None, 5, 10],
-                'clf__min_samples_leaf': [1, 5, 10],
-                'clf__max_features': ['sqrt', 'log2'],
-                'clf__class_weight': ['balanced', None]
+              #  'clf__max_depth': [None, 5, 10],
+               # 'clf__min_samples_leaf': [1, 5, 10],
+               # 'clf__max_features': ['sqrt', 'log2'],
+               # 'clf__class_weight': ['balanced', None]
             }),
             'LogisticRegression': (LogisticRegression(max_iter=1000), {
-            'clf__penalty': ['l1', 'l2'],
-            'clf__C': [0.01, 0.1, 1, 10, 100],
-            'clf__class_weight': [None, 'balanced'],
-            'clf__solver': ['liblinear', 'saga']
+               # 'clf__penalty': ['l1_ratio=1', 'l1_ratio=0'],
+                'clf__C': [0.01, 0.1, 1, 10, 100],
+               # 'clf__class_weight': [None, 'balanced'],
+               # 'clf__solver': ['liblinear', 'saga']
             }),
-            # 'LogisticRegression': (LogisticRegression(max_iter=1000), {
-            #    'clf__penalty': ['l1', 'l2'],
-            #    'clf__C': [0.01, 0.1, 1, 10, 100],
-            #    'clf__class_weight': [None, 'balanced'],
-            #    'clf__solver': ['liblinear', 'saga']
-            # }),
-            'KNN': (KNeighborsClassifier(), {
-                'clf__n_neighbors': [3, 5, 11, 21],
-                'clf__weights': ['uniform', 'distance'],
-                'clf__metric': ['euclidean', 'manhattan']
-            }),
-            'SVC': (SVC(probability=True, random_state=42), {
-                'clf__C': [0.1, 1, 10, 100],
-                'clf__kernel': ['linear', 'rbf', 'poly'],
-                'clf__gamma': ['scale', 'auto'],
-                'clf__class_weight': ['balanced', None]
-            }),
-            'LDA': (LinearDiscriminantAnalysis(), {
-                'clf__solver': ['svd', 'lsqr', 'eigen']
-            }),
-            'QDA': (QuadraticDiscriminantAnalysis(), {
-                'clf__reg_param': [0.0, 0.1, 0.5]
-            }),
-            'GaussianNB': (GaussianNB(), {
-                'clf__var_smoothing': [1e-9, 1e-8, 1e-7]
-            }),
-            'SGD': (SGDClassifier(loss='log_loss', random_state=42), {
-                'clf__alpha': [0.0001, 0.001, 0.01, 0.1],
-                'clf__penalty': ['l2', 'l1', 'elasticnet']
+            'XGBoost': (XGBClassifier(random_state=42, use_label_encoder=False, eval_metric='logloss'), {
+                'clf__n_estimators': [50, 100, 200],      # Aantal bomen
+               # 'clf__max_depth': [3, 5, 7],             # Hoe diep mag elke boom gaan? (3-5 is vaak zat voor radiomics)
+               # 'clf__learning_rate': [0.01, 0.1, 0.2],  # Hoe snel leert het model? (Lagere waarde = stabieler)
+               # 'clf__subsample': [0.8, 1.0],            # Gebruik een deel van de patiënten per boom (tegen overfitting)
+               # 'clf__colsample_bytree': [0.7, 1.0],     # Gebruik een deel van de features per boom
+               # 'clf__gamma': [0, 1, 5]                  # Minimale verliesreductie om een split te maken
             })
         }
-
 
     best_score = -1
     inner_loop = None
