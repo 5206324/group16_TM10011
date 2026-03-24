@@ -1,38 +1,15 @@
 #%%
 # Stap_3_Model_Manager.py
-from sklearn.pipeline import Pipeline
-from sklearn.impute import SimpleImputer
-from sklearn.feature_selection import VarianceThreshold
-from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import GridSearchCV
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.feature_selection import SelectKBest, f_classif
-import pandas as pd
-import os
-from sklearn.model_selection import StratifiedKFold
-import matplotlib.pyplot as plt
-import numpy as np
-import matplotlib.pyplot as plt
-from sklearn import datasets as ds
-from sklearn import metrics
-
-from sklearn.preprocessing import StandardScaler, RobustScaler
-from sklearn.decomposition import PCA
+from Stap_3B_var_cor_feat_select import VarianceCorrelationFilter
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis, QuadraticDiscriminantAnalysis
-from sklearn.naive_bayes import GaussianNB
-from sklearn.linear_model import LogisticRegression, SGDClassifier
-from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import RandomForestClassifier
-
-from sklearn.model_selection import train_test_split
 from sklearn.impute import SimpleImputer
-from sklearn.feature_selection import VarianceThreshold
-from sklearn.pipeline import Pipeline
+from sklearn.linear_model import LogisticRegression, SGDClassifier
 from sklearn.model_selection import GridSearchCV
-from sklearn.model_selection import cross_val_score, KFold
-from sklearn.feature_selection import SelectKBest, f_classif
+from sklearn.naive_bayes import GaussianNB
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import RobustScaler
 from sklearn.feature_selection import RFE
 from sklearn.svm import SVC
 from sklearn.feature_selection import RFECV
@@ -54,14 +31,24 @@ def inner_loop(X_train, y_train):
         n_jobs=-1             # Gebruik alle processors
     )
 
+
+def inner_loop(X_train, y_train):
+    # 1. De pre-processing stappen (Feature Selection & Scaling)
     common_steps = [
         ('imputer', SimpleImputer(strategy='median')),
-        ('variance', VarianceThreshold(threshold=0.01)),
+        ('feature_filter', VarianceCorrelationFilter(
+            variance_threshold=0.01,
+            correlation_threshold=0.95
+        )),
         ('scaler', RobustScaler()),
         ('rfecv', rfecv)
     ]
 
     # De classfiers
+        ('rfe', RFE(estimator=LogisticRegression(max_iter=5000), n_features_to_select=10))
+    ]
+    
+    # 2. De lijst met classifiers en hun hyperparameters
     classifiers = {
         'RandomForest': (RandomForestClassifier(random_state=42), {
             'clf__n_estimators': [50, 100, 150],
@@ -76,6 +63,12 @@ def inner_loop(X_train, y_train):
            'clf__class_weight': [None, 'balanced'],
            'clf__solver': ['liblinear', 'saga']
         }),
+        # 'LogisticRegression': (LogisticRegression(max_iter=1000), {
+        #    'clf__penalty': ['l1', 'l2'],
+        #    'clf__C': [0.01, 0.1, 1, 10, 100],
+        #    'clf__class_weight': [None, 'balanced'],
+        #    'clf__solver': ['liblinear', 'saga']
+        # }),
         'KNN': (KNeighborsClassifier(), {
             'clf__n_neighbors': [3, 5, 11, 21],
             'clf__weights': ['uniform', 'distance'],
@@ -86,12 +79,12 @@ def inner_loop(X_train, y_train):
             'clf__kernel': ['linear', 'rbf', 'poly'],
             'clf__gamma': ['scale', 'auto'],
             'clf__class_weight': ['balanced', None]
-        # }),
-        # 'LDA': (LinearDiscriminantAnalysis(), {
-        #     'clf__solver': ['svd', 'lsqr', 'eigen']
-        # }),
-        # 'QDA': (QuadraticDiscriminantAnalysis(), {
-        #     'clf__reg_param': [0.0, 0.1, 0.5]
+        }),
+        'LDA': (LinearDiscriminantAnalysis(), {
+            'clf__solver': ['svd', 'lsqr', 'eigen']
+        }),
+        'QDA': (QuadraticDiscriminantAnalysis(), {
+            'clf__reg_param': [0.0, 0.1, 0.5]
         }),
         'GaussianNB': (GaussianNB(), {
             'clf__var_smoothing': [1e-9, 1e-8, 1e-7]
@@ -106,20 +99,25 @@ def inner_loop(X_train, y_train):
     best_score = -1
     inner_loop = None
     
-
-    # We lopen door de classifiers heen (de 'alle combi's' op je whiteboard)
+    # 3. De loop die alle classifiers test (De Inner Loop)
     for name, (clf_model, params) in classifiers.items():
-            full_pipeline = Pipeline(steps=common_steps + [('clf', clf_model)])
+        # Belangrijk: De inspringing hieronder moet exact kloppen
+        full_pipeline = Pipeline(steps=common_steps + [('clf', clf_model)])
         
-        # De Inner Loop (5-fold cross validation binnen de training data)
-            grid = GridSearchCV(full_pipeline, param_grid=params, cv=5, scoring='accuracy', n_jobs=-1)
-            grid.fit(X_train, y_train)      
+        # Voer de GridSearch uit
+        grid = GridSearchCV(full_pipeline, param_grid=params, cv=5, scoring='accuracy', n_jobs=-1)
+        grid.fit(X_train, y_train)
       
-            print(f"> Best voor {name}: {grid.best_score_:.4f} met {grid.best_params_}")
+        print(f"> Best voor {name}: {grid.best_score_:.4f}")
         
-            if grid.best_score_ > best_score:
-                best_score = grid.best_score_
-                inner_loop = grid.best_estimator_
+        # Sla het allerbeste model op
+        if grid.best_score_ > best_score:
+            best_score = grid.best_score_
+            inner_loop = grid.best_estimator_
+            # Pak de naam van de klasse van de classifier (bijv. 'SVC' of 'RandomForestClassifier')
+            best_classifier = type(inner_loop.named_steps['clf']).__name__
             
-    return inner_loop
+    # We geven nu zowel de pipeline als de naam terug
+    return inner_loop, best_classifier
+
 # %%
