@@ -32,6 +32,7 @@ def inner_loop(X_train, y_train):
         n_jobs=-1             # Gebruik alle processors
     )
 
+
         # 1. De pre-processing stappen (Feature Selection & Scaling)
     common_steps = [
             ('imputer', SimpleImputer(strategy='median')),

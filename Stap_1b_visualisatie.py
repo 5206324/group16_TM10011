@@ -51,6 +51,7 @@ def plot_baseline_comparison(X, y):
             pipeline, X, y, cv=cv, n_jobs=-1, train_sizes=np.linspace(.1, 1.0, 5)
         )
         
+        
         train_scores_mean = np.mean(train_scores, axis=1)
         train_scores_std = np.std(train_scores, axis=1)
         test_scores_mean = np.mean(test_scores, axis=1)

@@ -82,6 +82,7 @@ for i, pakketje in enumerate(folds):
 
     # 4. Pak de trainingsdata en stuur naar de 'n training' fase
     beste_model = inner_loop(X_train_outer, y_train_outer)
+  
     
 #     # --- NIEUW: Haal de winnaar en zijn instellingen op ---
 #     # 1. De naam van de classifier (bijv. 'RandomForestClassifier')
