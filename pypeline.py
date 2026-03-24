@@ -3,6 +3,7 @@ import pandas as pd
 from pathlib import Path
 from sklearn.model_selection import StratifiedKFold
 import sys
+import numpy as np
 
 # Data inladen
 sys.path.append(str(Path.cwd()))
@@ -11,6 +12,16 @@ data = data_lipo("Lipo_radiomicFeatures.csv")
 if 'label' in data.columns:
     data = data.set_index(data.columns[0])
 
+
+#%% --- Step 1b: Data visualisatie ---
+from Stap_1b_visualisatie import plot_baseline_comparison
+
+X_baseline = data.select_dtypes(include=[np.number])
+if 'label' in X_baseline.columns:
+    X_baseline = X_baseline.drop(columns=['label'])
+y_baseline = data['label'].map({'lipoma': 0, 'liposarcoma': 1})
+
+plot_baseline_comparison(X_baseline, y_baseline)
 
 # %% --- Step 2: k-fold cross validation ---
 from Stap_2_kfolds_splitsing import kfold
