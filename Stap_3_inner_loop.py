@@ -1,53 +1,30 @@
 #%%
 # Stap_3_Model_Manager.py
-from sklearn.pipeline import Pipeline
-from sklearn.impute import SimpleImputer
-from sklearn.feature_selection import VarianceThreshold
-from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import GridSearchCV
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.feature_selection import SelectKBest, f_classif
-import pandas as pd
-import os
-from sklearn.model_selection import StratifiedKFold
-import matplotlib.pyplot as plt
-import numpy as np
-import matplotlib.pyplot as plt
-from sklearn import datasets as ds
-from sklearn import metrics
-
-from sklearn.preprocessing import StandardScaler, RobustScaler
-from sklearn.decomposition import PCA
+from Stap_3B_var_cor_feat_select import VarianceCorrelationFilter
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis, QuadraticDiscriminantAnalysis
-from sklearn.naive_bayes import GaussianNB
-from sklearn.svm import SVC
-from sklearn.linear_model import LogisticRegression, SGDClassifier
-from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.linear_model import SGDClassifier
-
-from sklearn.model_selection import train_test_split
 from sklearn.impute import SimpleImputer
-from sklearn.feature_selection import VarianceThreshold
-from sklearn.pipeline import Pipeline
+from sklearn.linear_model import LogisticRegression, SGDClassifier
 from sklearn.model_selection import GridSearchCV
-from sklearn.model_selection import cross_val_score, KFold
-from sklearn.feature_selection import SelectKBest, f_classif
+from sklearn.naive_bayes import GaussianNB
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import RobustScaler
 from sklearn.feature_selection import RFE
-
+from sklearn.svm import SVC
 
 def inner_loop(X_train, y_train):
     # 1. De pre-processing stappen (Feature Selection & Scaling)
     common_steps = [
         ('imputer', SimpleImputer(strategy='median')),
-        ('variance', VarianceThreshold(threshold=0.01)),
+        ('feature_filter', VarianceCorrelationFilter(
+            variance_threshold=0.01,
+            correlation_threshold=0.95
+        )),
         ('scaler', RobustScaler()),
-        ('select_k', SelectKBest(f_classif, k=50)),
         ('rfe', RFE(estimator=LogisticRegression(max_iter=5000), n_features_to_select=10))
     ]
-
+    
     # 2. De lijst met classifiers en hun hyperparameters
     classifiers = {
         'RandomForest': (RandomForestClassifier(random_state=42), {
