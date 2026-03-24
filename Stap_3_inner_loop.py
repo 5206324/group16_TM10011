@@ -12,6 +12,25 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import RobustScaler
 from sklearn.feature_selection import RFE
 from sklearn.svm import SVC
+from sklearn.feature_selection import RFECV
+
+
+
+def inner_loop(X_train, y_train):
+    # De EXACTE stappen van je studiegenoot
+    estimator = LogisticRegression(max_iter=5000, solver='liblinear', penalty='l2') # we gebruiken een LogisticRegression voor de rangschrikking van de features
+    
+
+    # de RFE feature selection definiëren
+    rfecv =  RFECV(
+        estimator=estimator, 
+        step=1,               # Verwijder 1 feature per stap
+        cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=42),                 # Gebruik 5-fold CV om het beste aantal te vinden
+        scoring='accuracy',   # Optimaliseer op nauwkeurigheid MISS MOET DIT AUC WORDEN!!
+        min_features_to_select=10, # Stop niet voordat er nog maar 10 over zijn
+        n_jobs=-1             # Gebruik alle processors
+    )
+
 
 def inner_loop(X_train, y_train):
     # 1. De pre-processing stappen (Feature Selection & Scaling)
@@ -22,6 +41,10 @@ def inner_loop(X_train, y_train):
             correlation_threshold=0.95
         )),
         ('scaler', RobustScaler()),
+        ('rfecv', rfecv)
+    ]
+
+    # De classfiers
         ('rfe', RFE(estimator=LogisticRegression(max_iter=5000), n_features_to_select=10))
     ]
     
@@ -33,6 +56,12 @@ def inner_loop(X_train, y_train):
             'clf__min_samples_leaf': [1, 5, 10],
             'clf__max_features': ['sqrt', 'log2'],
             'clf__class_weight': ['balanced', None]
+        }),
+        'LogisticRegression': (LogisticRegression(max_iter=1000), {
+           'clf__penalty': ['l1', 'l2'],
+           'clf__C': [0.01, 0.1, 1, 10, 100],
+           'clf__class_weight': [None, 'balanced'],
+           'clf__solver': ['liblinear', 'saga']
         }),
         # 'LogisticRegression': (LogisticRegression(max_iter=1000), {
         #    'clf__penalty': ['l1', 'l2'],
@@ -65,6 +94,7 @@ def inner_loop(X_train, y_train):
             'clf__penalty': ['l2', 'l1', 'elasticnet']
         })
     }
+
 
     best_score = -1
     inner_loop = None

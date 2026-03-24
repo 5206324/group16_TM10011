@@ -64,6 +64,30 @@ for i, pakketje in enumerate(folds):
 #    print(f"WAARSCHUWING: Er zijn maar {len(alle_analyse_data)} folds verwerkt!")
 
 #toon_vergelijking(alle_analyse_data)
+for i, pakketje in enumerate(folds):
+    print (f"\n--- Fold {i+1}---")
+    
+    # ... (je bestaande data ophaal code) ...
+
+    # 4. Pak de trainingsdata en stuur naar de 'n training' fase
+    beste_model = inner_loop(X_train_outer, y_train_outer)
+    
+    # --- NIEUW: Haal de winnaar en zijn instellingen op ---
+    # 1. De naam van de classifier (bijv. 'RandomForestClassifier')
+    clf_naam = type(beste_model.named_steps['clf']).__name__
+    
+    # 2. De hyperparameters van alleen de classifier-stap
+    # We filteren de hele pipeline-lijst op alles wat met 'clf__' begint
+    alle_params = beste_model.get_params()
+    best_params_clf = {k.split('__')[1]: v for k, v in alle_params.items() if k.startswith('clf__')}
+    
+    print(f"🏆 Winnaar Fold {i+1}: {clf_naam}")
+    print(f"⚙️ Instellingen: {best_params_clf}")
+    # -----------------------------------------------------
+
+    # De rest van je code...
+    data_fold = resultaten(beste_model, X_train_outer, y_train_outer, X_test_outer, y_test_outer, feature_names)
+    alle_analyse_data.append(data_fold)
 
 # %% Step 3: Imputation of missing values
 #from Step_3_Imputation_of_missing_values.py import ...
@@ -79,3 +103,5 @@ for i, pakketje in enumerate(folds):
 
 # %% Step 7: Post analysis
 #from Step_7_Post_analysis.py import ...
+
+# %%
