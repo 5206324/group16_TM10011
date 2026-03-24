@@ -47,11 +47,10 @@ def inner_loop(X_train, y_train):
         # 2. De lijst met classifiers en hun hyperparameters
     classifiers = {
             'RandomForest': (RandomForestClassifier(random_state=42), {
-                'clf__n_estimators': [50, 100, 150],
-              #  'clf__max_depth': [None, 5, 10],
-               # 'clf__min_samples_leaf': [1, 5, 10],
-               # 'clf__max_features': ['sqrt', 'log2'],
-               # 'clf__class_weight': ['balanced', None]
+                'clf__n_estimators': [150, 300, 450], # Aantal bomen
+                'clf__max_depth': [None, 3, 5, 10], # Max diepte van elke boom (voorkomt overfitting)
+                'clf__min_samples_leaf': [2, 4, 6, 8], # Minimaal aantal samles in laatste leaf (voorkomt overfitting)
+                'clf__max_features': ['sqrt', 'log2'] # Hoeveel features mag elke boom gebruiken van het totaal aantal features
             }),
             'LogisticRegression': (LogisticRegression(max_iter=1000), {
                # 'clf__penalty': ['l1_ratio=1', 'l1_ratio=0'],
