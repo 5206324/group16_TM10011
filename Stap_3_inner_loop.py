@@ -56,7 +56,7 @@ def inner_loop(X_train, y_train):
                 'clf__solver': ['liblinear']                # Bepaalt hoe de fout wordt geschat. 'liblinear' is goed voor kleinere datasets
             }),
             'XGBoost': (XGBClassifier(random_state=42, use_label_encoder=False, eval_metric='logloss'), {   #XGBoost sequentially reduces errors of previous trees
-                'clf__n_estimators': [50, 75, 100,],        # Aantal bomen
+                'clf__n_estimators': [50, 75, 100],        # Aantal bomen
                 'clf__max_depth': [2, 3, 4],                # Hoe diep mag elke boom gaan?)
                 'clf__min_child_weight': [2, 4, 6],         # Minimaal gewicht dat een leaf moet hebben om te mogen splitten
                 'clf__learning_rate': [0.01, 0.05, 0.1],    # Hoe snel leert het model? (Lagere waarde = stabieler)
