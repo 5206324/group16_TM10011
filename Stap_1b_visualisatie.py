@@ -22,6 +22,8 @@ def plot_baseline_comparison(X, y):
         LogisticRegression(max_iter=1000),
         KNeighborsClassifier(),
         svm.SVC(probability=True, random_state=42),
+        LinearDiscriminantAnalysis(),
+        QuadraticDiscriminantAnalysis(),
         # LinearDiscriminantAnalysis(),
         # QuadraticDiscriminantAnalysis(),
         GaussianNB(),

@@ -14,6 +14,16 @@ data = data_lipo("Lipo_radiomicFeatures.csv")
 if 'label' in data.columns:
     data = data.set_index(data.columns[0])
 
+#%% --- Step 1b: Data visualisatie ---
+from Stap_1b_visualisatie import plot_baseline_comparison
+
+X_baseline = data.select_dtypes(include=[np.number])
+if 'label' in X_baseline.columns:
+    X_baseline = X_baseline.drop(columns=['label'])
+y_baseline = data['label'].map({'lipoma': 0, 'liposarcoma': 1})
+
+plot_baseline_comparison(X_baseline, y_baseline)
+
 
 #%% --- Step 1b: Data visualisatie ---
 from Stap_1b_visualisatie import plot_baseline_comparison
@@ -38,8 +48,7 @@ from Stap_3_inner_loop import inner_loop
 from Stap_7_Data_verzameling import analyse, resultaten
 
 folds = kfold(data, target_column='label', n_splits=5)
-#alle_scores = []
-#alle_importances = []
+
 feature_names = data.drop(columns=['label']).columns
 alle_analyse_data =[]
 
