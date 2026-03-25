@@ -24,6 +24,8 @@ def plot_baseline_comparison(X, y):
         svm.SVC(probability=True, random_state=42),
         LinearDiscriminantAnalysis(),
         QuadraticDiscriminantAnalysis(),
+        # LinearDiscriminantAnalysis(),
+        # QuadraticDiscriminantAnalysis(),
         GaussianNB(),
         SGDClassifier(loss='modified_huber', random_state=42),
         XGBClassifier(random_state=42)
@@ -50,6 +52,7 @@ def plot_baseline_comparison(X, y):
         train_sizes, train_scores, test_scores = learning_curve(
             pipeline, X, y, cv=cv, n_jobs=-1, train_sizes=np.linspace(.1, 1.0, 5)
         )
+        
         
         train_scores_mean = np.mean(train_scores, axis=1)
         train_scores_std = np.std(train_scores, axis=1)

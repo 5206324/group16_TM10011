@@ -23,6 +23,16 @@ y_baseline = data['label'].map({'lipoma': 0, 'liposarcoma': 1})
 plot_baseline_comparison(X_baseline, y_baseline)
 
 
+#%% --- Step 1b: Data visualisatie ---
+from Stap_1b_visualisatie import plot_baseline_comparison
+
+X_baseline = data.select_dtypes(include=[np.number])
+if 'label' in X_baseline.columns:
+    X_baseline = X_baseline.drop(columns=['label'])
+y_baseline = data['label'].map({'lipoma': 0, 'liposarcoma': 1})
+
+plot_baseline_comparison(X_baseline, y_baseline)
+
 # %% --- Step 2: k-fold cross validation ---
 from Stap_2_kfolds_splitsing import kfold
 from Stap_3_inner_loop import inner_loop
@@ -58,6 +68,47 @@ for i, pakketje in enumerate(folds):
     print(f"Fold {i+1} - Train Acc: {data_fold['train_acc']:.2%}")
     print(f"Fold {i+1} - Test Acc: {data_fold['test_acc']:.2%}")
     
+    #print(f"Fold {i+1} - AUC: {data_fold['auc']:.2f}")
+    # Data verzamelen voor post-analyse
+ #   score, imp = verzamel_resultaten(beste_model_fold, pakketje['X_test'], 
+ #                                    pakketje['y_test'], feature_names)
+ #   
+ #   alle_scores.append(score)
+ #   if imp is not None:
+ #       alle_importances.append(imp)
+
+  #  print(f"Score Fold {i+1}: {score:.3f}")
+#if len(alle_analyse_data) == 5:
+#    toon_vergelijking(alle_analyse_data)
+#else:
+#    print(f"WAARSCHUWING: Er zijn maar {len(alle_analyse_data)} folds verwerkt!")
+
+# #toon_vergelijking(alle_analyse_data)
+# for i, pakketje in enumerate(folds):
+#     print (f"\n--- Fold {i+1}---")
+    
+#     # ... (je bestaande data ophaal code) ...
+
+    # 4. Pak de trainingsdata en stuur naar de 'n training' fase
+    beste_model = inner_loop(X_train_outer, y_train_outer)
+  
+    
+#     # --- NIEUW: Haal de winnaar en zijn instellingen op ---
+#     # 1. De naam van de classifier (bijv. 'RandomForestClassifier')
+#     clf_naam = type(beste_model.named_steps['clf']).__name__
+    
+#     # 2. De hyperparameters van alleen de classifier-stap
+#     # We filteren de hele pipeline-lijst op alles wat met 'clf__' begint
+#     alle_params = beste_model.get_params()
+#     best_params_clf = {k.split('__')[1]: v for k, v in alle_params.items() if k.startswith('clf__')}
+    
+#     print(f"🏆 Winnaar Fold {i+1}: {clf_naam}")
+#     print(f"⚙️ Instellingen: {best_params_clf}")
+#     # -----------------------------------------------------
+
+#     # De rest van je code...
+#     data_fold = resultaten(beste_model, X_train_outer, y_train_outer, X_test_outer, y_test_outer, feature_names)
+#     alle_analyse_data.append(data_fold)
 
 # %% Step 3: Imputation of missing values
 #from Step_3_Imputation_of_missing_values.py import ...
@@ -73,3 +124,5 @@ for i, pakketje in enumerate(folds):
 
 # %% Step 7: Post analysis
 #from Step_7_Post_analysis.py import ...
+
+# %%
