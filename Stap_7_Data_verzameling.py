@@ -1,4 +1,4 @@
-#%% stap 7
+#%% === STEP 7: RESULTATEN ===
 import pandas as pd
 import numpy as np
 from sklearn.metrics import roc_auc_score
