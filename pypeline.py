@@ -51,6 +51,7 @@ folds = kfold(data, target_column='label', n_splits=5)
 
 feature_names = data.drop(columns=['label']).columns
 alle_analyse_data =[]
+alle_fold_features = []
 
 for i, pakketje in enumerate(folds):
     print(f"\n--- Fold {i+1}---")
@@ -64,59 +65,120 @@ for i, pakketje in enumerate(folds):
     data_fold = resultaten(beste_model, X_train_outer, y_train_outer, X_test_outer, y_test_outer, feature_names, naam)
     alle_analyse_data.append(data_fold)
 
-#  --- VISUALISATIE & FEATURE ANALYSE ---
+    rfecv_stap = beste_model.named_steps['rfecv']
+    filter_stap = beste_model.named_steps['feature_filter']
+    
+    # Gebruik de get_support() methode van de nieuwe filter
+    masker_filter = filter_stap.get_support()
+    namen_na_filter = X_train_outer.columns[masker_filter]
+    
+    # Pak de winnaars van deze specifieke fold
+    winnende_features = namen_na_filter[rfecv_stap.support_].tolist()
+    
+    # Maak een tijdelijk tabelletje voor deze fold
+    df_fold = pd.DataFrame({
+        'Fold': i + 1,
+        'Model': naam,
+        'Feature': winnende_features
+    })
+    
+    alle_fold_features.append(df_fold)
+
+
+# --- VISUALISATIE & FEATURE ANALYSE ---
     if 'rfecv' in beste_model.named_steps:
-        rfecv_stap = beste_model.named_steps['rfecv']
+        rfecv = beste_model.named_steps['rfecv']
         filter_stap = beste_model.named_steps['feature_filter']
         
-        # 1. Haal de namen op na de eerste filter stap
-        # We kijken direct in de 'columns_to_keep_' van jouw VarianceCorrelationFilter
-        if hasattr(filter_stap, 'columns_to_keep_'):
-            namen_na_filter = filter_stap.columns_to_keep_
-        else:
-            # Als dat niet werkt, gebruiken we de originele X_train kolommen 
-            # (Let op: dit werkt alleen als de filter niks heeft weggegooid, 
-            #  anders krijg je een lengte-fout)
-            namen_na_filter = X_train_outer.columns
-
-        # 2. Welke zijn uiteindelijk door RFECV gekozen?
-        rfecv_mask = rfecv_stap.support_
+        # 1. Namen ophalen (werkt nu direct door onze aanpassing in Stap_3B)
+        namen_na_filter = filter_stap.columns_to_keep_
+        winnende_features = [namen_na_filter[j] for j in range(len(namen_na_filter)) if rfecv.support_[j]]
         
-        # Match de namen (we zorgen dat de lengte klopt om errors te voorkomen)
-        try:
-            winnende_features = namen_na_filter[rfecv_mask]
-            print(f"\n✅ Analyse Fold {i+1}:")
-            print(f"Optimaal aantal features: {rfecv_stap.n_features_}")
-            print(f"Geselecteerde features: {winnende_features.tolist()}")
-        except Exception as e:
-            print(f"⚠️ Kon namen niet matchen: {e}")
-            print(f"Optimaal aantal features: {rfecv_stap.n_features_}")
+        print(f"\n✅ Fold {i+1} Klaar ({naam})")
+        print(f"Optimaal aantal features: {rfecv.n_features_}")
+        print(f"Winnende features: {winnende_features}")
 
-        # 3. Het Plaatje (Score vs Aantal Features)
-        scores = rfecv_stap.cv_results_['mean_test_score']
-        stds = rfecv_stap.cv_results_['std_test_score']
+        # 2. De RFECV Curve Plotten
+        plt.figure(figsize=(8, 4))
         
-        # Bereken de x-as op basis van de testpunten en de stapgrootte (10)
-        n_punten = len(scores)
-        # De x-as moet lopen van min_features_to_select tot het totaal aantal features
-        # dat de RFECV heeft gezien (n_features_in_)
-        x_axis = np.linspace(rfecv_stap.min_features_to_select, 
-                             rfecv_stap.min_features_to_select + (n_punten-1) * rfecv_stap.step, 
-                             n_punten)
+        # De x-as: we berekenen de punten op basis van de scores die RFECV heeft opgeslagen
+        scores = rfecv.cv_results_['mean_test_score']
+        # x-as loopt van min_features tot totaal aantal in stappen van 'step'
+        x_range = np.arange(rfecv.min_features_to_select, 
+                            rfecv.min_features_to_select + len(scores) * rfecv.step, 
+                            rfecv.step)
 
-        plt.figure(figsize=(10, 5))
-        plt.plot(x_axis, scores, color='#2E86C1', lw=2, marker='o', markersize=4, label='Mean AUC')
-        plt.fill_between(x_axis, scores - stds, scores + stds, alpha=0.15, color='#2E86C1')
-        
-        plt.axvline(x=rfecv_stap.n_features_, color='#E74C3C', linestyle='--', 
-                    label=f'Optimum: {rfecv_stap.n_features_} f')
+        plt.plot(x_range, scores, color='#2E86C1', marker='o', markersize=4, label='Mean AUC')
+        plt.axvline(x=rfecv.n_features_, color='#E74C3C', linestyle='--', label=f'Optimum: {rfecv.n_features_}')
         
         plt.title(f"RFECV Curve - Fold {i+1} ({naam})")
         plt.xlabel("Aantal Features")
-        plt.ylabel("Cross-Validation Score (AUC)")
-        plt.legend(loc="lower right")
+        plt.ylabel("AUC Score")
+        plt.legend()
         plt.grid(True, alpha=0.3)
-        plt.show() 
+        plt.tight_layout()
+        plt.show()
+
+
+
+# %% 
+
+# Plak alle folds onder elkaar
+df_eindrapport = pd.concat(alle_fold_features, ignore_index=True)
+
+# 1. Toon de volledige lijst
+print("\n--- OVERZICHT ALLE FOLDS ---")
+print(df_eindrapport)
+
+# 2. De "Gouden Tip": Welke features komen het vaakst voor?
+frequentie_tabel = df_eindrapport['Feature'].value_counts().reset_index()
+frequentie_tabel.columns = ['Radiomics Feature', 'Aantal keer gekozen (max 5)']
+
+print("\n🏆 STABILITEITS-ANALYSE (Welke features zijn het meest robuust?):")
+print(frequentie_tabel)
+
+# Optioneel: Sla het direct op voor je verslag
+# df_eindrapport.to_csv("alle_features_per_fold.csv", index=False)
+
+
+# import joblib
+
+# # Sla het beste model van de allerlaatste fold op (of doe dit in de loop per fold)
+# bestandsnaam = f"best_model_{naam}.pkl"
+# joblib.dump(beste_model, bestandsnaam)
+
+# print(f"✅ Model is opgeslagen als {bestandsnaam}. Je kunt nu de computer afsluiten!")
+
+# # %%
+# import pandas as pd
+
+# # 1. Haal de onderdelen uit de pipeline die nu in je geheugen zit
+# rfecv_stap = beste_model.named_steps['rfecv']
+# filter_stap = beste_model.named_steps['feature_filter']
+
+# # 2. Haal de namen op die de filter hebben overleefd (de 167 namen)
+# namen_na_filter = filter_stap.columns_to_keep_
+
+# # 3. Welke van die 167 heeft de RFECV aangevinkt als 'True'?
+# # We maken een lijstje van de namen waar het masker 'True' is
+# winnende_features = [namen_na_filter[i] for i in range(len(namen_na_filter)) if rfecv_stap.support_[i]]
+
+# # 4. Maak er een mooi tabelletje van voor Fold 5
+# df_top_features = pd.DataFrame({
+#     'Rank': range(1, len(winnende_features) + 1),
+#     'Radiomics Feature': winnende_features
+# })
+
+# print("\n--- RESULTAAT FOLD 5 ---")
+# print(f"Gekozen model: {naam}")
+# print(f"Aantal features: {len(winnende_features)}")
+# print(df_top_features.to_string(index=False))
+
+# Optioneel: Sla het direct op als CSV zodat je het in Excel kunt openen
+# df_top_features.to_csv("top_features_fold5.csv", index=False)
+
+# %% 
+
 # %% Step 3: Imputation of missing values
 #from Step_3_Imputation_of_missing_values.py import ...
 
