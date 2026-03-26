@@ -20,14 +20,15 @@ from xgboost import XGBClassifier
 def inner_loop(X_train, y_train):
     # De EXACTE stappen van je studiegenoot
     estimator = LogisticRegression(max_iter=5000, solver='liblinear', penalty='l2') # we gebruiken een LogisticRegression voor de rangschrikking van de features
-    
+    min_features_to_select = 5
+
     # de RFE feature selection definiëren
     rfecv =  RFECV(
         estimator=estimator, 
         step=1,               # Verwijder 1 feature pe-r stap
         cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=42),                 # Gebruik 5-fold CV om het beste aantal te vinden
-        scoring='accuracy',   # Optimaliseer op nauwkeurigheid MISS MOET DIT AUC WORDEN!!
-        min_features_to_select=10, # Stop niet voordat er nog maar 10 over zijn
+        scoring='roc_auc',   # Optimaliseer op nauwkeurigheid MISS MOET DIT AUC WORDEN!!
+        min_features_to_select=min_features_to_select, # Stop niet voordat er nog maar 10 over zijn
         n_jobs=-1             # Gebruik alle processors
     )
 
@@ -63,33 +64,29 @@ def inner_loop(X_train, y_train):
                 'clf__subsample': [0.8, 1.0],               # Gebruik een deel van de patiënten per boom (tegen overfitting)
                 'clf__colsample_bytree': [0.8, 1.0],        # Gebruik een deel van de features per boom
                 # later onderstaande hyperparameters teoveogen
-                #'clf__gamma': [0, 0.5, 1],                 # Minimaal benodigde gain om een split te maken
-                #'clf__reg_lambda': [1, 5, 10]              # Panlizes grote leaf weightts
+                'clf__gamma': [0, 0.5, 1],                 # Minimaal benodigde gain om een split te maken
+                'clf__reg_lambda': [1, 5, 10]              # Panlizes grote leaf weightts
             })
         }
 
     best_score = -1
-    inner_loop = None
-        
-        # 3. De loop die alle classifiers test (De Inner Loop)
+    best_pipeline = None  # Hernoemd van inner_loop naar best_pipeline
+    best_classifier = None
+
     for name, (clf_model, params) in classifiers.items():
-            # Belangrijk: De inspringing hieronder moet exact kloppen
-            full_pipeline = Pipeline(steps=common_steps + [('clf', clf_model)])
-            
-            # Voer de GridSearch uit
-            grid = GridSearchCV(full_pipeline, param_grid=params, cv=5, scoring='accuracy', n_jobs=-1)
-            grid.fit(X_train, y_train)
+        full_pipeline = Pipeline(steps=common_steps + [('clf', clf_model)])
         
-            print(f"> Best voor {name}: {grid.best_score_:.4f}")
-            
-            # Sla het allerbeste model op
-            if grid.best_score_ > best_score:
-                best_score = grid.best_score_
-                inner_loop = grid.best_estimator_
-                # Pak de naam van de klasse van de classifier (bijv. 'SVC' of 'RandomForestClassifier')
-                best_classifier = type(inner_loop.named_steps['clf']).__name__
-                
-        # We geven nu zowel de pipeline als de naam terug
-    return inner_loop, best_classifier
+        # Tip: zet scoring op 'roc_auc' als je dat ook in RFECV doet voor consistentie
+        grid = GridSearchCV(full_pipeline, param_grid=params, cv=5, scoring='accuracy', n_jobs=-1)
+        grid.fit(X_train, y_train)
+        
+        print(f"> Best voor {name}: {grid.best_score_:.4f}")
+        
+        if grid.best_score_ > best_score:
+            best_score = grid.best_score_
+            best_pipeline = grid.best_estimator_ # Slaat de hele pipeline op (incl. rfecv)
+            best_classifier = name 
+
+    return best_pipeline, best_classifier
 
 # %%
