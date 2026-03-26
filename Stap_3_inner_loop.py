@@ -56,14 +56,14 @@ def inner_loop(X_train, y_train):
             }),
             'XGBoost': (XGBClassifier(random_state=42, eval_metric='logloss'), {   #XGBoost sequentially reduces errors of previous trees
                 'clf__n_estimators': [5],#0, 75, 100],        # Aantal bomen
-                'clf__max_depth': [2, 3, 4],                # Hoe diep mag elke boom gaan?)
-                'clf__min_child_weight': [2, 4, 6],         # Minimaal gewicht dat een leaf moet hebben om te mogen splitten
-                'clf__learning_rate': [0.01, 0.05, 0.1],    # Hoe snel leert het model? (Lagere waarde = stabieler)
-                'clf__subsample': [0.8, 1.0],               # Gebruik een deel van de patiënten per boom (tegen overfitting)
-                'clf__colsample_bytree': [0.8, 1.0],        # Gebruik een deel van de features per boom
+                'clf__max_depth': [2,],# 3, 4],                # Hoe diep mag elke boom gaan?)
+                'clf__min_child_weight': [2,],# 4, 6],         # Minimaal gewicht dat een leaf moet hebben om te mogen splitten
+                'clf__learning_rate': [0.01],#, 0.05, 0.1],    # Hoe snel leert het model? (Lagere waarde = stabieler)
+                #'clf__subsample': [0.8, 1.0],               # Gebruik een deel van de patiënten per boom (tegen overfitting)
+                #'clf__colsample_bytree': [0.8, 1.0],        # Gebruik een deel van de features per boom
                 # later onderstaande hyperparameters teoveogen
-                'clf__gamma': [0, 0.5, 1],                 # Minimaal benodigde gain om een split te maken
-                'clf__reg_lambda': [1, 5, 10]              # Panlizes grote leaf weightts
+                #'clf__gamma': [0, 0.5, 1],                 # Minimaal benodigde gain om een split te maken
+                #'clf__reg_lambda': [1, 5, 10]              # Panlizes grote leaf weightts
             })
         }
 
