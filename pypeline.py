@@ -84,6 +84,7 @@ for i, pakketje in enumerate(folds):
     
     alle_fold_features.append(df_fold)
 
+
 # --- VISUALISATIE & FEATURE ANALYSE ---
     if 'rfecv' in beste_model.named_steps:
         rfecv = beste_model.named_steps['rfecv']
