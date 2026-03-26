@@ -32,7 +32,6 @@ def inner_loop(X_train, y_train):
         n_jobs=-1             # Gebruik alle processors
     )
 
-
         # 1. De pre-processing stappen (Feature Selection & Scaling)
     common_steps = [
             ('imputer', SimpleImputer(strategy='median')),
@@ -65,8 +64,13 @@ def inner_loop(X_train, y_train):
                 'clf__subsample': [0.8, 1.0],               # Gebruik een deel van de patiënten per boom (tegen overfitting)
                 'clf__colsample_bytree': [0.8, 1.0],        # Gebruik een deel van de features per boom
                 # later onderstaande hyperparameters teoveogen
+<<<<<<< HEAD
                 'clf__gamma': [0, 0.5, 1],                 # Minimaal benodigde gain om een split te maken
                 'clf__reg_lambda': [1, 5, 10]              # Panlizes grote leaf weightts
+=======
+                #'clf__gamma': [0, 0.5, 1],                 # Minimaal benodigde gain om een split te maken
+                #'clf__reg_lambda': [1, 5, 10]              # Panlizes grote leaf weightts
+>>>>>>> b6c058133d89d5a7aaf5fa30f394ee2e3bed81c8
             })
         }
 
