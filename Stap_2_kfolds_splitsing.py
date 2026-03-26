@@ -1,4 +1,4 @@
-#%%
+#%% === STEP 2: K-FOLDS AANMAKEN ===
 from sklearn.model_selection import StratifiedKFold
 
 def kfold(data, target_column='label', n_splits=5):
