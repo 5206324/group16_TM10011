@@ -54,7 +54,7 @@ def inner_loop(X_train, y_train):
                 'clf__C': [0.001, 0.01, 0.1, 1, 10],        # Hoe sterk is de regularisatie? (Lagere waarde = sterkere regularisatie → minder overfitting, meer simperl)
                 'clf__solver': ['liblinear']                # Bepaalt hoe de fout wordt geschat. 'liblinear' is goed voor kleinere datasets
             }),
-            'XGBoost': (XGBClassifier(random_state=42, use_label_encoder=False, eval_metric='logloss'), {   #XGBoost sequentially reduces errors of previous trees
+            'XGBoost': (XGBClassifier(random_state=42, eval_metric='logloss'), {   #XGBoost sequentially reduces errors of previous trees
                 'clf__n_estimators': [50, 75, 100],        # Aantal bomen
                 'clf__max_depth': [2, 3, 4],                # Hoe diep mag elke boom gaan?)
                 'clf__min_child_weight': [2, 4, 6],         # Minimaal gewicht dat een leaf moet hebben om te mogen splitten
