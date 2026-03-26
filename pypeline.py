@@ -64,6 +64,7 @@ for i, pakketje in enumerate(folds):
         'Fold': i + 1,
         'Model': naam,
         'Feature': winnende_features
+                                                                        #hier kunnen we meer data aan toevoegen als we willen
     })
     
     alle_fold_features.append(df_fold)
