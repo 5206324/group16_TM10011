@@ -70,6 +70,7 @@ def inner_loop(X_train, y_train):
     best_score = -1
     best_pipeline = None  # Hernoemd van inner_loop naar best_pipeline
     best_classifier = None
+    best_params = None
 
     for name, (clf_model, params) in classifiers.items():
         full_pipeline = Pipeline(steps=common_steps + [('clf', clf_model)])
@@ -83,8 +84,9 @@ def inner_loop(X_train, y_train):
         if grid.best_score_ > best_score:
             best_score = grid.best_score_
             best_pipeline = grid.best_estimator_ # Slaat de hele pipeline op (incl. rfecv)
-            best_classifier = name 
+            best_classifier = name
+            best_params = grid.best_params_
 
-    return best_pipeline, best_classifier
+    return best_pipeline, best_classifier, best_params, best_score
 
 # %%
