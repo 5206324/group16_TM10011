@@ -75,7 +75,7 @@ def inner_loop(X_train, y_train):
         full_pipeline = Pipeline(steps=common_steps + [('clf', clf_model)])
         
         # Tip: zet scoring op 'roc_auc' als je dat ook in RFECV doet voor consistentie
-        grid = GridSearchCV(full_pipeline, param_grid=params, cv=5, scoring='accuracy', n_jobs=-1)
+        grid = GridSearchCV(full_pipeline, param_grid=params, cv=5, scoring='roc_auc', n_jobs=-1)
         grid.fit(X_train, y_train)
         
         print(f"> Best voor {name}: {grid.best_score_:.4f}")
