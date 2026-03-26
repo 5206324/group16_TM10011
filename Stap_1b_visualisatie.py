@@ -1,4 +1,4 @@
-#%%
+# %% === STEP 1B: BASELINE CLASSIFIER COMPARISON ===
 
 import pandas as pd
 import numpy as np
@@ -16,20 +16,19 @@ from sklearn import svm
 from xgboost import XGBClassifier
 
 def plot_baseline_comparison(X, y):
-    # Alle gewenste classifiers
-    clsfs = [
+    clsfs = [                                                                               # Alle mogelijke classifiers
         RandomForestClassifier(random_state=42),
         LogisticRegression(max_iter=1000),
         KNeighborsClassifier(),
         svm.SVC(probability=True, random_state=42),
-        # LinearDiscriminantAnalysis(),
-        # QuadraticDiscriminantAnalysis(),
+        LinearDiscriminantAnalysis(),
+        QuadraticDiscriminantAnalysis(),
         GaussianNB(),
-        SGDClassifier(loss='modified_huber', random_state=42),
+        SGDClassifier(loss='modified_huber', random_state=42),                              # modified Hubert - tolerantie voor uitschieters en waarschijnlijkheidsschattingen
         XGBClassifier(random_state=42)
     ]
     
-    clf_names = ["RandomForest", "LogisticReg", "KNN", "SVC", "LDA", "QDA", "GaussianNB", "SGD", "XGBoost"]  
+    clf_names = ["RandomForest", "LogisticReg", "KNN", "SVC", "LDA", "QDA", "GaussianNB", "SGD", "XGBoost"]             #makkelijkere namen
     
     results = []
     cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
@@ -45,7 +44,7 @@ def plot_baseline_comparison(X, y):
             ('clf', clf)
         ])
         
-        # --- 1. Learning Curve Berekening ---
+        # --- Learning Curve Berekening ---
         ax_lc = axes[i, 0]
         train_sizes, train_scores, test_scores = learning_curve(
             pipeline, X, y, cv=cv, n_jobs=-1, train_sizes=np.linspace(.1, 1.0, 5)
@@ -57,7 +56,7 @@ def plot_baseline_comparison(X, y):
         test_scores_mean = np.mean(test_scores, axis=1)
         test_scores_std = np.std(test_scores, axis=1)
 
-        # Plot Learning Curve met schaduw
+        # --- Plot Learning Curve met schaduw ---
         ax_lc.grid(True)
         ax_lc.fill_between(train_sizes, train_scores_mean - train_scores_std,
                          train_scores_mean + train_scores_std, alpha=0.1, color="r")
@@ -72,15 +71,14 @@ def plot_baseline_comparison(X, y):
         ax_lc.set_ylim(0.4, 1.05)
         ax_lc.legend(loc="best")
 
-        # --- 2. ROC Curves & Statistiek ---
+        # --- ROC Curves & Statistiek ---
         ax_roc = axes[i, 1]
         mean_fpr = np.linspace(0, 1, 100)
         tprs = []
         aucs = []
 
-        # We gebruiken .values om index-fouten te voorkomen
         for train, test in cv.split(X, y):
-            pipeline.fit(X.values[train], y.values[train])
+            pipeline.fit(X.values[train], y.values[train])                                  #  .values om index-fouten te voorkomen
             probs = pipeline.predict_proba(X.values[test])[:, 1]
             fpr, tpr, _ = roc_curve(y.values[test], probs)
             tprs.append(np.interp(mean_fpr, fpr, tpr))
@@ -107,7 +105,7 @@ def plot_baseline_comparison(X, y):
             'Gap (Overfit)': train_scores_mean[-1] - test_scores_mean[-1]
         })
 
-    # Toon de objectieve ranking in de console
+    # === FINALE RANKING TABEL ===
     ranking_df = pd.DataFrame(results).sort_values(by='Mean AUC', ascending=False)
     print("\n" + "="*50)
     print("      OBJECTIEVE MODEL RANKING (Baseline)")

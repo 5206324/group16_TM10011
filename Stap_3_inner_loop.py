@@ -1,5 +1,4 @@
-#%%
-# Stap_3_Model_Manager.py
+#%% === STEP 3: INNER LOOP ===
 from Stap_3B_var_cor_feat_select import VarianceCorrelationFilter
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis, QuadraticDiscriminantAnalysis
 from sklearn.ensemble import RandomForestClassifier
@@ -18,18 +17,17 @@ from xgboost import XGBClassifier
 
 
 def inner_loop(X_train, y_train):
-    # De EXACTE stappen van je studiegenoot
-    estimator = LogisticRegression(max_iter=5000, solver='liblinear', penalty='l2') # we gebruiken een LogisticRegression voor de rangschrikking van de features
+    
+    estimator = LogisticRegression(max_iter=5000, solver='liblinear', penalty='l2')     # LogisticRegression voor de rangschrikking van de features
     min_features_to_select = 5
 
-    # de RFE feature selection definiëren
-    rfecv =  RFECV(
+    rfecv =  RFECV(                                                                     # De RFE feature selection definiëren
         estimator=estimator, 
-        step=1,               # Verwijder 1 feature pe-r stap
-        cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=42),                 # Gebruik 5-fold CV om het beste aantal te vinden
-        scoring='roc_auc',   # Optimaliseer op nauwkeurigheid MISS MOET DIT AUC WORDEN!!
-        min_features_to_select=min_features_to_select, # Stop niet voordat er nog maar 10 over zijn
-        n_jobs=-1             # Gebruik alle processors
+        step=1,                                                                         # Verwijder 1 feature pe-r stap
+        cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=42),                  # Gebruik 5-fold CV om het beste aantal te vinden
+        scoring='roc_auc',                                                              # Optimaliseer op nauwkeurigheid
+        min_features_to_select=min_features_to_select,                                  # Stop niet voordat er nog minimaal 5 over zijn, tenzij anders gevonden in eerder script
+        n_jobs=-1                                                                       # Gebruik alle processors
     )
 
         # 1. De pre-processing stappen (Feature Selection & Scaling)
