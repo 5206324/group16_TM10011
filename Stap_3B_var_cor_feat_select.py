@@ -40,7 +40,7 @@ class VarianceCorrelationFilter(BaseEstimator, TransformerMixin):
         # 4. De definitieve lijst met namen die we houden
         self.columns_to_keep_ = [col for col in cols_after_var if col not in to_drop]
 
-        print(f"Features reduced from {len(cols_after_var)} to {len(self.columns_to_keep_)} na correlatie filtering")
+        #print(f"Features reduced from {len(cols_after_var)} to {len(self.columns_to_keep_)} na correlatie filtering")
         return self
 
     def transform(self, X):
