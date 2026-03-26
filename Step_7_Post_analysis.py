@@ -6,23 +6,48 @@
 # y_pred = = voorspelde klasse : clf.predict(X_test) (hierbij is X_test dus vd testdata)
 # model = classifier model
 
-def outcomes(y_test, y_score, y_pred, model):
-    from sklearn import metrics
+# def outcomes(y_test, y_score, y_pred, model):
+#     from sklearn import metrics
 
-    auc = metrics.roc_auc_score(y_test, y_score)
-    accuracy = metrics.accuracy_score(y_test, y_pred)
-    F1 = metrics.f1_score(y_test, y_pred)
-    precision = metrics.precision_score(y_test, y_pred)
-    recall = metrics.recall_score(y_test, y_pred)
+#     auc = metrics.roc_auc_score(y_test, y_score)
+#     accuracy = metrics.accuracy_score(y_test, y_pred)
+#     F1 = metrics.f1_score(y_test, y_pred)
+#     precision = metrics.precision_score(y_test, y_pred)
+#     recall = metrics.recall_score(y_test, y_pred)
 
-    print(type(model))
-    print('Acc:' + str(accuracy))
-    print('AUC:' + str(auc))
-    print('F1:' + str(F1))
-    print('precision:' + str(precision))
-    print('recall:' + str(recall))
+#     print(type(model))
+#     print('Acc:' + str(accuracy))
+#     print('AUC:' + str(auc))
+#     print('F1:' + str(F1))
+#     print('precision:' + str(precision))
+#     print('recall:' + str(recall))
 
-    return auc, accuracy, F1, precision, recall
+#     return auc, accuracy, F1, precision, recall
+
+from sklearn import metrics
+
+def resultaten(model, X_train, y_train, X_test, y_test, feature_names, naam):
+    # 1. Voorspellingen doen (kansen voor de ROC, klasses voor de rest)
+    y_score_test = model.predict_proba(X_test)[:, 1]
+    y_pred_test = model.predict(X_test)
+    
+    # 2. ROC data berekenen
+    fpr, tpr, thresholds = metrics.roc_curve(y_test, y_score_test)
+    auc_score = metrics.auc(fpr, tpr)
+    
+    # 3. Alle statistieken in een dictionary stoppen
+    res_dict = {
+        'model_naam': naam,
+        'auc': auc_score,
+        'fpr': fpr,            # CRUCIAAL voor de plot
+        'tpr': tpr,            # CRUCIAAL voor de plot
+        'accuracy': metrics.accuracy_score(y_test, y_pred_test),
+        'precision': metrics.precision_score(y_test, y_pred_test, zero_division=0),
+        'recall': metrics.recall_score(y_test, y_pred_test),
+        'f1': metrics.f1_score(y_test, y_pred_test)
+    }
+    
+    return res_dict
 
 #%% ROC Curve
 
