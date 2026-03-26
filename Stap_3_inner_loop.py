@@ -47,25 +47,26 @@ def inner_loop(X_train, y_train):
         # 2. De lijst met classifiers en hun hyperparameters
     classifiers = {
             'RandomForest': (RandomForestClassifier(random_state=42), {
-                'clf__n_estimators': [50, 100, 150],
-                'clf__max_depth': [None, 5, 10],
-                'clf__min_samples_leaf': [1, 5, 10]
-               # 'clf__max_features': ['sqrt', 'log2'],
-               # 'clf__class_weight': ['balanced', None]
+                'clf__n_estimators': [150, 300, 450],       # Aantal bomen
+                'clf__max_depth': [3, 5, 7],                # Max diepte van elke boom (voorkomt overfitting)
+                'clf__min_samples_leaf': [2, 4, 6, 8],      # Minimaal aantal samles in laatste leaf (voorkomt overfitting)
+                'clf__max_features': ['sqrt', 'log2']       # Hoeveel features mag elke boom gebruiken van het totaal aantal features
             }),
             'LogisticRegression': (LogisticRegression(max_iter=1000), {
-               # 'clf__penalty': ['l1_ratio=1', 'l1_ratio=0'],
-                'clf__C': [0.01, 0.1, 1, 10, 100],
-                'clf__class_weight': [None, 'balanced'],
-                'clf__solver': ['liblinear', 'saga']
+                'clf__penalty': ['l2'],                     # Regularisatie houdt alle features, irrelevante featues zijn al verwijderd door de feature selection en de variance/correlation filter
+                'clf__C': [0.001, 0.01, 0.1, 1, 10],        # Hoe sterk is de regularisatie? (Lagere waarde = sterkere regularisatie → minder overfitting, meer simperl)
+                'clf__solver': ['liblinear']                # Bepaalt hoe de fout wordt geschat. 'liblinear' is goed voor kleinere datasets
             }),
-            'XGBoost': (XGBClassifier(random_state=42, use_label_encoder=False, eval_metric='logloss'), {
-                'clf__n_estimators': [50, 100, 200],      # Aantal bomen
-                'clf__max_depth': [3, 5, 7],              # Hoe diep mag elke boom gaan? (3-5 is vaak zat voor radiomics)
-                'clf__learning_rate': [0.01, 0.1, 0.2]  # Hoe snel leert het model? (Lagere waarde = stabieler)
-               # 'clf__subsample': [0.8, 1.0],            # Gebruik een deel van de patiënten per boom (tegen overfitting)
-               # 'clf__colsample_bytree': [0.7, 1.0],     # Gebruik een deel van de features per boom
-               # 'clf__gamma': [0, 1, 5]                  # Minimale verliesreductie om een split te maken
+            'XGBoost': (XGBClassifier(random_state=42, use_label_encoder=False, eval_metric='logloss'), {   #XGBoost sequentially reduces errors of previous trees
+                'clf__n_estimators': [50, 75, 100],        # Aantal bomen
+                'clf__max_depth': [2, 3, 4],                # Hoe diep mag elke boom gaan?)
+                'clf__min_child_weight': [2, 4, 6],         # Minimaal gewicht dat een leaf moet hebben om te mogen splitten
+                'clf__learning_rate': [0.01, 0.05, 0.1],    # Hoe snel leert het model? (Lagere waarde = stabieler)
+                'clf__subsample': [0.8, 1.0],               # Gebruik een deel van de patiënten per boom (tegen overfitting)
+                'clf__colsample_bytree': [0.8, 1.0],        # Gebruik een deel van de features per boom
+                # later onderstaande hyperparameters teoveogen
+                'clf__gamma': [0, 0.5, 1],                 # Minimaal benodigde gain om een split te maken
+                'clf__reg_lambda': [1, 5, 10]              # Panlizes grote leaf weightts
             })
         }
 
@@ -88,3 +89,5 @@ def inner_loop(X_train, y_train):
             best_classifier = name 
 
     return best_pipeline, best_classifier
+
+# %%
