@@ -29,7 +29,7 @@ class VarianceCorrelationFilter(BaseEstimator, TransformerMixin):
         cols_after_var = X_df.columns[self.variance_selector.get_support()].tolist()
         data_var_df = X_df[cols_after_var]
 
-        print(f"Features reduced from {len(self.feature_names_in_)} to {len(cols_after_var)} na variantie filtering")
+        #print(f"Features reduced from {len(self.feature_names_in_)} to {len(cols_after_var)} na variantie filtering")
 
         # 3. Correlatie Filter
         corr_matrix = data_var_df.corr().abs()
