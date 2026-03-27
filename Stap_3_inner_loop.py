@@ -60,7 +60,7 @@ def inner_loop(X_train, y_train):
             'clf__n_estimators': [50],#, 75, 100],
             'clf__max_depth': [2, 3, 4],
             'clf__min_child_weight': [2, 4, 6],
-            'clf__learning_rate': [0.01, 0.05, 0.1],
+            #'clf__learning_rate': [0.01, 0.05, 0.1],
             'clf__subsample': [0.8, 1.0],
             'clf__colsample_bytree': [0.8, 1.0],
             # 'clf__gamma': [0, 0.5, 1],
