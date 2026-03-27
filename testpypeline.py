@@ -92,12 +92,15 @@ for i, pakketje in enumerate(folds):
         # Update Beste Fold op basis van TEST AUC
         if naam not in best_results_per_model or auc_test > best_results_per_model[naam]['auc']:
             best_results_per_model[naam] = {
+                'fold': i + 1,
                 'auc': auc_test,
                 'fpr_test': fpr_test,
                 'tpr_test': tpr_test,
                 'fpr_train': fpr_train,
                 'tpr_train': tpr_train,
-                'pipeline': model
+                'pipeline': model,
+                'X_test': X_test_outer.copy(),
+                'y_test': y_test_outer.copy(),
             }
 
     auc_tabel_data.append(fold_scores)
@@ -123,6 +126,13 @@ for i, pakketje in enumerate(folds):
     })
 
     alle_fold_features.append(current_fold_df)
+
+    if (
+        winnaar_naam in best_results_per_model
+        and best_results_per_model[winnaar_naam]['fold'] == i + 1
+    ):
+        best_results_per_model[winnaar_naam]['selected_features'] = winnende_features
+        best_results_per_model[winnaar_naam]['n_features'] = len(winnende_features)
 
 #%%# --- RESULTATEN ---
 df_auc_final = pd.DataFrame(auc_tabel_data)
@@ -167,5 +177,46 @@ for naam, data in best_results_per_model.items():
             print(f"    - {item:20}: {waarde}")
 
 print("\n====================================================")
+
+# %%
+
+def print_best_logistic_regression_metrics(best_results_dict):
+    if 'LogisticRegression' not in best_results_dict:
+        print("\nGeen LogisticRegression-model gevonden in best_results_per_model.")
+        return
+
+    best_logreg = best_results_dict['LogisticRegression']
+    model = best_logreg['pipeline']
+    X_test = best_logreg['X_test']
+    y_test = best_logreg['y_test']
+
+    y_pred = model.predict(X_test)
+    y_prob = model.predict_proba(X_test)[:, 1]
+
+    tn, fp, fn, tp = metrics.confusion_matrix(y_test, y_pred, labels=[0, 1]).ravel()
+
+    auc = metrics.roc_auc_score(y_test, y_prob)
+    accuracy = metrics.accuracy_score(y_test, y_pred)
+    sensitivity = tp / (tp + fn) if (tp + fn) else 0.0
+    specificity = tn / (tn + fp) if (tn + fp) else 0.0
+    ppv = tp / (tp + fp) if (tp + fp) else 0.0
+    npv = tn / (tn + fn) if (tn + fn) else 0.0
+    f1 = metrics.f1_score(y_test, y_pred, zero_division=0)
+
+    print("\n=== BESTE LOGISTIC REGRESSION OP TESTDATA ===")
+    print("Modelnaam: LogisticRegression")
+    print(f"Aantal samples: {len(X_test)}")
+    print(f"Gekozen features: {best_logreg.get('selected_features', [])}")
+    print(f"Aantal features: {best_logreg.get('n_features', 0)}")
+    print(f"AUC: {auc:.4f}")
+    print(f"Accuracy: {accuracy:.4f}")
+    print(f"Sensitivity: {sensitivity:.4f}")
+    print(f"Specificity: {specificity:.4f}")
+    print(f"Positive Predictive Value: {ppv:.4f}")
+    print(f"Negative Predictive Value: {npv:.4f}")
+    print(f"F1: {f1:.4f}")
+
+
+print_best_logistic_regression_metrics(best_results_per_model)
 
 # %%
