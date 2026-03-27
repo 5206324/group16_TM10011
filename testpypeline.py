@@ -168,4 +168,11 @@ for naam, data in best_results_per_model.items():
 
 print("\n====================================================")
 
+# %% mean and std
+df_auc_final_scores = df_auc_final.drop(columns=['Fold'])
+mean_std = df_auc_final_scores.agg(['mean', 'std']).T
+mean_std.columns = ['Gemiddelde', 'SD']
+mean_std = mean_std.round(2)
+print(mean_std)
+
 # %%
