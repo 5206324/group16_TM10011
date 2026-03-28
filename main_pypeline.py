@@ -84,7 +84,7 @@ for i, pakketje in enumerate(folds):
         fpr_train, tpr_train, _ = metrics.roc_curve(y_train_outer, y_score_train)
         auc_train = metrics.auc(fpr_train, tpr_train)
         
-        # Sla op voor de tabel (DIT MOET OVEREENKOMEN MET JE PRINT STAP)
+        # Sla op voor de tabel
         fold_scores[f"{naam}_Test"] = round(auc_test, 3)
         fold_scores[f"{naam}_Train"] = round(auc_train, 3)
 
@@ -103,8 +103,8 @@ for i, pakketje in enumerate(folds):
 
     # --- FEATURE ANALYSE ---
     test_kolommen = {k: v for k, v in fold_scores.items() if k.endswith('_Test')}
-    winnaar_kolom = max(test_kolommen, key=test_kolommen.get) # Bijv: 'RandomForest_Test'
-    winnaar_naam = winnaar_kolom.replace('_Test', '')        # Wordt: 'RandomForest'
+    winnaar_kolom = max(test_kolommen, key=test_kolommen.get)   # Bijv: 'RandomForest_Test'
+    winnaar_naam = winnaar_kolom.replace('_Test', '')           # Wordt: 'RandomForest'
     
     winnaar_model = getrainde_pipelines[winnaar_naam]    
     rfecv = winnaar_model.named_steps['rfecv']
@@ -129,7 +129,7 @@ df_auc_final = pd.DataFrame(auc_tabel_data)
 cols = ['Fold'] + sorted([c for c in df_auc_final.columns if c != 'Fold'])
 df_auc_final = df_auc_final[cols]
 
-print("\n📊 AUC VERGELIJKING: TRAIN VS TEST PER FOLD:")
+print("AUC VERGELIJKING: TRAIN VS TEST PER FOLD:")
 print("=========================================================================")
 print(df_auc_final.to_string(index=False))
 print("=========================================================================")
@@ -187,7 +187,7 @@ sns.stripplot(x='Model', y='AUC', hue='Type', data=df_plot,
 plt.title('Verdeling van AUC scores over 5 Folds (Train vs Test)', fontsize=14, fontweight='bold')
 plt.ylabel('AUC Score')
 plt.xlabel('Model')
-plt.ylim(0.4, 1.05) # AUC loopt altijd tot 1.0
+plt.ylim(0.4, 1.05)                                         # AUC loopt altijd tot 1.0
 plt.legend(title='Fase', loc='lower right')
 
 plt.tight_layout()
@@ -196,4 +196,4 @@ plt.show()
 #%% --- Extra: Metrics ---
 metrics_best_fold(folds, best_results_per_model)
 
-# %%
+

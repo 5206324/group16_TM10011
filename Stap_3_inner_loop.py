@@ -61,7 +61,7 @@ def inner_loop(X_train, y_train):
                 'clf__learning_rate': [0.01, 0.05, 0.1],    # Hoe snel leert het model? (Lagere waarde = stabieler)
                 'clf__subsample': [0.8, 1.0],               # Gebruik een deel van de patiënten per boom (tegen overfitting)
                 'clf__colsample_bytree': [0.8, 1.0],        # Gebruik een deel van de features per boom
-                # later onderstaande hyperparameters teoveogen
+
                 'clf__gamma': [0, 0.5, 1],                 # Minimaal benodigde gain om een split te maken
                 'clf__reg_lambda': [1, 5, 10]              # Panlizes grote leaf weightts
             })
