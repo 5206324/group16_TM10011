@@ -62,6 +62,7 @@ folds = kfold(data, target_column='label', n_splits=5)
 
 best_results_per_model = {}
 auc_tabel_data = []
+alle_fold_features = []
 
 for i, pakketje in enumerate(folds):
     print(f"\n--- Fold {i+1} ---")
