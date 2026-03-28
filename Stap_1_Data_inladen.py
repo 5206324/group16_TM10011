@@ -42,7 +42,7 @@ for column in feature_cols:
         if np.any((all_values < (Q1 - 1.5 * IQR)) | (all_values > (Q3 + 1.5 * IQR))):   # Tukey's Fences: Buiten [Q1 - 1.5*IQR, Q3 + 1.5*IQR] wordt gemarkeerd als outlier
             outliers_total += 1
 
-# --- Uitkomsten voor in verslag ---
+# --- Uitkomsten ---
 num_features = len(feature_cols)
 print(f"\nRatio Gaussian/Non-Gaussian in HEALTHY: {not_normal_dist0} - {num_features - not_normal_dist0}")
 print(f"Ratio Gaussian/Non-Gaussian in SICK:    {not_normal_dist1} - {num_features - not_normal_dist1}")
@@ -52,4 +52,3 @@ if outliers_total > (num_features / 2):                                         
     print("\nADVIES: Gebruik de RobustScaler (meer dan 50% van de features heeft outliers).")
 else:
     print("\nADVIES: StandardScaler is mogelijk, maar RobustScaler blijft veiliger.")
-# %%

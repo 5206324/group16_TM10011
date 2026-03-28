@@ -1,12 +1,21 @@
-# %% --- Step 1: Data exploration ---
-import pandas as pd
-from pathlib import Path
+#%% === Step 0: Imports ===
 import sys
 import numpy as np
-from sklearn import metrics 
+import pandas as pd
+import seaborn as sns
 import matplotlib.pyplot as plt
+from pathlib import Path
+from sklearn import metrics
+from sklearn.preprocessing import LabelEncoder
 
-# ===== ROC TRAIN/TEST FUNCTIE (BOVENAAN!) =====
+sys.path.append(str(Path.cwd()))
+from Stap_1_Data_inladen import data_lipo 
+from Stap_1b_visualisatie import plot_baseline_comparison
+from Stap_2_kfolds_splitsing import kfold
+from Stap_3_inner_loop import inner_loop
+from metrics import metrics_best_fold
+
+# --- Extra definities ---
 def plot_train_test_roc(best_results_dict):
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 7))
     
@@ -31,17 +40,13 @@ def plot_train_test_roc(best_results_dict):
     plt.tight_layout()
     plt.show()
 
-# Data inladen
-sys.path.append(str(Path.cwd()))
-from Stap_1_Data_inladen import data_lipo 
-data = data_lipo("Lipo_radiomicFeatures.csv")
 
+# %% --- Step 1: Data exploration ---
+data = data_lipo("Lipo_radiomicFeatures.csv")
 if 'label' in data.columns:
     data = data.set_index(data.columns[0])
 
-#%% --- Step 1b: Data visualisatie ---
-from Stap_1b_visualisatie import plot_baseline_comparison
-
+#%% --- Step 1: Data prep ---
 X_baseline = data.select_dtypes(include=[np.number])
 if 'label' in X_baseline.columns:
     X_baseline = X_baseline.drop(columns=['label'])
@@ -49,20 +54,14 @@ if 'label' in X_baseline.columns:
 y_baseline = data['label'].map({'lipoma': 0, 'liposarcoma': 1})
 plot_baseline_comparison(X_baseline, y_baseline)
 
-# %% --- Step 2: k-fold cross validation ---
-from sklearn.preprocessing import LabelEncoder
-from Stap_2_kfolds_splitsing import kfold
-from Stap_3_inner_loop import inner_loop
-
-# Label encoding
 le = LabelEncoder()
 data['label'] = le.fit_transform(data['label'])
 
+# %% --- Step 2: k-fold cross validation ---
 folds = kfold(data, target_column='label', n_splits=5)
 
 best_results_per_model = {}
 auc_tabel_data = []
-alle_fold_features = []
 
 for i, pakketje in enumerate(folds):
     print(f"\n--- Fold {i+1} ---")
@@ -73,7 +72,6 @@ for i, pakketje in enumerate(folds):
     getrainde_pipelines = inner_loop(X_train_outer, y_train_outer)
     
     fold_scores = {'Fold': i + 1}
-
     for naam, model in getrainde_pipelines.items():
         # --- TEST ---
         y_score_test = model.predict_proba(X_test_outer)[:, 1]
@@ -124,7 +122,7 @@ for i, pakketje in enumerate(folds):
 
     alle_fold_features.append(current_fold_df)
 
-#%%# --- RESULTATEN ---
+#%%# --- RESULTATEN RAPPORT ---
 df_auc_final = pd.DataFrame(auc_tabel_data)
 
 cols = ['Fold'] + sorted([c for c in df_auc_final.columns if c != 'Fold'])
@@ -139,7 +137,7 @@ print("=========================================================================
 plot_train_test_roc(best_results_per_model)
 
 
-# %%
+# %% --- Stap 4: Optimale Parameters ---
 print("\n⚙️ OPTIMALE PARAMETERS PER TOPMODEL:")
 print("============================================")
 
@@ -174,5 +172,27 @@ mean_std = df_auc_final_scores.agg(['mean', 'std']).T
 mean_std.columns = ['Gemiddelde', 'SD']
 mean_std = mean_std.round(2)
 print(mean_std)
+
+# %% --- Extra: BOXPLOT ---
+df_plot = df_auc_final.melt(id_vars=['Fold'], var_name='Metric', value_name='AUC')
+df_plot[['Model', 'Type']] = df_plot['Metric'].str.split('_', expand=True)
+
+plt.figure(figsize=(10, 6))
+sns.set_style("whitegrid")
+ax = sns.boxplot(x='Model', y='AUC', hue='Type', data=df_plot, palette='Set2')
+sns.stripplot(x='Model', y='AUC', hue='Type', data=df_plot, 
+              dodge=True, color='black', alpha=0.3, jitter=True, ax=ax)
+
+plt.title('Verdeling van AUC scores over 5 Folds (Train vs Test)', fontsize=14, fontweight='bold')
+plt.ylabel('AUC Score')
+plt.xlabel('Model')
+plt.ylim(0.4, 1.05) # AUC loopt altijd tot 1.0
+plt.legend(title='Fase', loc='lower right')
+
+plt.tight_layout()
+plt.show()
+
+#%% --- Extra: Metrics ---
+metrics_best_fold(folds, best_results_per_model)
 
 # %%
