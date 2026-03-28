@@ -1,5 +1,5 @@
 #%%% === STEP 3B: variantie en correlatie van features berekenen
-#  Featues met hoge correlatie en lage variantie weghalen
+###  Featues met hoge correlatie en lage variantie weghalen
 
 import numpy as np
 import pandas as pd
@@ -25,11 +25,8 @@ class VarianceCorrelationFilter(BaseEstimator, TransformerMixin):
 
         # 2. Variantie Filter
         self.variance_selector.fit(X_df)
-        # Welke namen overleven de variantie check?
         cols_after_var = X_df.columns[self.variance_selector.get_support()].tolist()
         data_var_df = X_df[cols_after_var]
-
-       # print(f"Features reduced from {len(self.feature_names_in_)} to {len(cols_after_var)} na variantie filtering")
 
         # 3. Correlatie Filter
         corr_matrix = data_var_df.corr().abs()
@@ -40,7 +37,6 @@ class VarianceCorrelationFilter(BaseEstimator, TransformerMixin):
         # 4. De definitieve lijst met namen die we houden
         self.columns_to_keep_ = [col for col in cols_after_var if col not in to_drop]
 
-        #print(f"Features reduced from {len(cols_after_var)} to {len(self.columns_to_keep_)} na correlatie filtering")
         return self
 
     def transform(self, X):
@@ -49,7 +45,6 @@ class VarianceCorrelationFilter(BaseEstimator, TransformerMixin):
         else:
             X_df = X
         
-        # Geef alleen de kolommen terug die we in 'fit' hebben goedgekeurd
         return X_df[self.columns_to_keep_]
 
     def get_support(self, indices=False):
