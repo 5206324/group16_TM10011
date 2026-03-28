@@ -11,11 +11,11 @@ class VarianceCorrelationFilter(BaseEstimator, TransformerMixin):
         self.variance_threshold = variance_threshold
         self.correlation_threshold = correlation_threshold
         self.variance_selector = VarianceThreshold(threshold=self.variance_threshold)
-        self.columns_to_keep_ = None  # Hier slaan we de winnende namen op
-        self.feature_names_in_ = None # Originele namen
+        self.columns_to_keep_ = None                            # Hier slaan we de winnende namen op
+        self.feature_names_in_ = None                           # Originele namen
 
     def fit(self, X, y=None):
-        # 1. Zorg dat we een DataFrame hebben met kolomnamen
+        # 1. DataFrame met kolomnamen
         if not isinstance(X, pd.DataFrame):
             X_df = pd.DataFrame(X)
         else:
@@ -34,7 +34,7 @@ class VarianceCorrelationFilter(BaseEstimator, TransformerMixin):
         
         to_drop = [column for column in upper.columns if any(upper[column] > self.correlation_threshold)]
         
-        # 4. De definitieve lijst met namen die we houden
+        # 4. De definitieve lijst met namen
         self.columns_to_keep_ = [col for col in cols_after_var if col not in to_drop]
 
         return self
